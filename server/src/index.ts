@@ -25,6 +25,8 @@ app.use(cors());
 
 if (process.env.NODE_ENV === 'production') {
   const clientDist = path.join(__dirname, '../../../../../client/dist');
+  console.log('__dirname:', __dirname);
+  console.log('clientDist:', clientDist);
   app.use(express.static(clientDist));
   app.get('*', (_req, res) => {
     res.sendFile(path.join(clientDist, 'index.html'));
