@@ -67,6 +67,7 @@ export interface GameOverData {
 export interface ClientEvents {
   'create-lobby': (data: { displayName: string; settings: GameSettings }) => void;
   'join-lobby': (data: { code: string; displayName: string }) => void;
+  'reconnect-player': (data: { token: string; lobbyCode: string }) => void;
   'update-settings': (data: { settings: Partial<GameSettings> }) => void;
   'update-ranker-order': (data: { order: string[] }) => void;
   'start-game': () => void;
@@ -80,8 +81,10 @@ export interface ClientEvents {
 }
 
 export interface ServerEvents {
-  'lobby-created': (data: { lobbyCode: string; playerId: string }) => void;
-  'lobby-joined': (data: { playerId: string }) => void;
+  'lobby-created': (data: { lobbyCode: string; playerId: string; reconnectToken: string }) => void;
+  'lobby-joined': (data: { playerId: string; lobbyCode: string; reconnectToken: string }) => void;
+  'reconnect-success': (data: LobbyState & { playerId: string; reconnectToken: string }) => void;
+  'reconnect-failed': (data: { message: string }) => void;
   'lobby-updated': (data: LobbyState) => void;
   'phase-changed': (data: LobbyState) => void;
   'player-submitted': (data: { playerId: string }) => void;

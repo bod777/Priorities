@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import type { GameSettings, GamePhase, CardFull, Player, LobbyState } from '../../shared/src/types.js';
 
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -18,10 +19,13 @@ export interface ServerGameState {
   rankerStats: Map<string, number[]>;
   turnHistory: import('../../shared/src/types.js').TurnResult[];
   submittedPlayerIds: Set<string>;
+  pendingTimers: Map<string, ReturnType<typeof setTimeout>>;
+  reconnectTokens: Map<string, string>;
 }
 
 export const lobbies = new Map<string, ServerGameState>();
 export const socketToLobby = new Map<string, string>();
+export const tokenToLobby = new Map<string, string>();
 
 export function generateLobbyCode(): string {
   let code: string;
@@ -34,7 +38,7 @@ export function generateLobbyCode(): string {
   return code;
 }
 
-export function createLobby(hostSocketId: string, displayName: string, settings: GameSettings): ServerGameState {
+export function createLobby(hostSocketId: string, displayName: string, settings: GameSettings): { state: ServerGameState; token: string } {
   const code = generateLobbyCode();
   const player: Player = {
     id: hostSocketId,
@@ -59,14 +63,19 @@ export function createLobby(hostSocketId: string, displayName: string, settings:
     rankerStats: new Map(),
     turnHistory: [],
     submittedPlayerIds: new Set(),
+    pendingTimers: new Map(),
+    reconnectTokens: new Map(),
   };
 
+  const token = randomUUID();
+  state.reconnectTokens.set(token, hostSocketId);
   lobbies.set(code, state);
   socketToLobby.set(hostSocketId, code);
-  return state;
+  tokenToLobby.set(token, code);
+  return { state, token };
 }
 
-export function joinLobby(code: string, socketId: string, displayName: string): ServerGameState | null {
+export function joinLobby(code: string, socketId: string, displayName: string): { state: ServerGameState; token: string } | null {
   const state = lobbies.get(code);
   if (!state) return null;
   if (state.phase !== 'lobby') return null;
@@ -79,11 +88,74 @@ export function joinLobby(code: string, socketId: string, displayName: string): 
     connected: true,
   };
 
+  const token = randomUUID();
+  state.reconnectTokens.set(token, socketId);
   state.players.set(socketId, player);
   state.rankerOrder.push(socketId);
   state.scores.set(socketId, 0);
   socketToLobby.set(socketId, code);
-  return state;
+  tokenToLobby.set(token, code);
+  return { state, token };
+}
+
+export function reconnectPlayer(token: string, newSocketId: string): { state: ServerGameState; playerId: string } | null {
+  const lobbyCode = tokenToLobby.get(token);
+  if (!lobbyCode) return null;
+  const state = lobbies.get(lobbyCode);
+  if (!state) return null;
+
+  const oldSocketId = state.reconnectTokens.get(token);
+  if (!oldSocketId) return null;
+  const player = state.players.get(oldSocketId);
+  if (!player) return null;
+
+  // Cancel any pending auto-submit timer for this player
+  const timer = state.pendingTimers.get(oldSocketId);
+  if (timer) {
+    clearTimeout(timer);
+    state.pendingTimers.delete(oldSocketId);
+  }
+
+  // Swap old socket ID for new one everywhere
+  player.id = newSocketId;
+  player.connected = true;
+
+  state.players.delete(oldSocketId);
+  state.players.set(newSocketId, player);
+
+  state.rankerOrder = state.rankerOrder.map((id) => (id === oldSocketId ? newSocketId : id));
+
+  if (state.hostId === oldSocketId) state.hostId = newSocketId;
+  if (state.currentRankerId === oldSocketId) state.currentRankerId = newSocketId;
+
+  if (state.submittedPlayerIds.has(oldSocketId)) {
+    state.submittedPlayerIds.delete(oldSocketId);
+    state.submittedPlayerIds.add(newSocketId);
+  }
+
+  const score = state.scores.get(oldSocketId);
+  if (score !== undefined) {
+    state.scores.delete(oldSocketId);
+    state.scores.set(newSocketId, score);
+  }
+
+  const rankerStats = state.rankerStats.get(oldSocketId);
+  if (rankerStats !== undefined) {
+    state.rankerStats.delete(oldSocketId);
+    state.rankerStats.set(newSocketId, rankerStats);
+  }
+
+  socketToLobby.delete(oldSocketId);
+  socketToLobby.set(newSocketId, lobbyCode);
+
+  // Issue a fresh token
+  state.reconnectTokens.delete(token);
+  tokenToLobby.delete(token);
+  const newToken = randomUUID();
+  state.reconnectTokens.set(newToken, newSocketId);
+  tokenToLobby.set(newToken, lobbyCode);
+
+  return { state, playerId: newSocketId };
 }
 
 export function getLobbyForSocket(socketId: string): ServerGameState | null {

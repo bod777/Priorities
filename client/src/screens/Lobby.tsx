@@ -33,10 +33,13 @@ function SortablePlayer({ player, index }: { player: Player; index: number }) {
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-3 cursor-move hover:bg-gray-100 transition">
+      <div className={`flex items-center gap-3 rounded-lg p-3 cursor-move transition ${player.connected ? 'bg-gray-50 hover:bg-gray-100' : 'bg-gray-100 opacity-50'}`}>
         <span className="text-sm font-bold text-purple-400 w-5 text-center">{index + 1}</span>
-        <span className="font-medium flex-1">{player.displayName}</span>
-        {player.isHost && (
+        <span className={`font-medium flex-1 ${!player.connected ? 'text-gray-400' : ''}`}>{player.displayName}</span>
+        {!player.connected && (
+          <span className="bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full text-xs">disconnected</span>
+        )}
+        {player.isHost && player.connected && (
           <span className="bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full text-xs">Host</span>
         )}
       </div>
@@ -135,10 +138,13 @@ export function Lobby() {
             ) : (
               <div className="space-y-2">
                 {orderedPlayers.map((player, index) => (
-                  <div key={player.id} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+                  <div key={player.id} className={`flex items-center gap-3 rounded-lg p-3 ${player.connected ? 'bg-gray-50' : 'bg-gray-100 opacity-50'}`}>
                     <span className="text-sm font-bold text-purple-400 w-5 text-center">{index + 1}</span>
-                    <span className="font-medium flex-1">{player.displayName}</span>
-                    {player.isHost && (
+                    <span className={`font-medium flex-1 ${!player.connected ? 'text-gray-400' : ''}`}>{player.displayName}</span>
+                    {!player.connected && (
+                      <span className="bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full text-xs">disconnected</span>
+                    )}
+                    {player.isHost && player.connected && (
                       <span className="bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full text-xs">Host</span>
                     )}
                   </div>

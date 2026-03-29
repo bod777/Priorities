@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { useSocket } from '../hooks/useSocket.ts';
+import { useSocket, clearReconnectInfo } from '../hooks/useSocket.ts';
 import { useGame } from '../context/GameContext.tsx';
 import type { GameSettings } from '../../../shared/src/types.ts';
 
 export function Home() {
   const { socket, connected } = useSocket();
   const { dispatch } = useGame();
+
+  const pendingToken = localStorage.getItem('priorities_reconnect_token');
+  const pendingLobby = localStorage.getItem('priorities_reconnect_lobby');
   const [displayName, setDisplayName] = useState('');
   const [lobbyCode, setLobbyCode] = useState('');
   const [mode, setMode] = useState<'menu' | 'create' | 'join'>('menu');
@@ -46,6 +49,25 @@ export function Home() {
 
         {mode === 'menu' && (
           <div className="space-y-4">
+            {pendingToken && pendingLobby && (
+              <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4 space-y-3">
+                <p className="text-yellow-800 font-medium text-center">
+                  Rejoin lobby <span className="font-bold">{pendingLobby}</span>?
+                </p>
+                <button
+                  onClick={() => socket?.emit('reconnect-player', { token: pendingToken, lobbyCode: pendingLobby })}
+                  className="w-full bg-yellow-500 text-white py-3 px-6 rounded-lg font-semibold hover:bg-yellow-600 transition"
+                >
+                  Rejoin Game
+                </button>
+                <button
+                  onClick={() => { clearReconnectInfo(); window.location.reload(); }}
+                  className="w-full text-yellow-700 text-sm underline hover:text-yellow-900 transition"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
             <button
               onClick={() => setMode('create')}
               className="w-full bg-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-purple-700 transition"

@@ -1,11 +1,11 @@
-implement individual guessing
+# Outstanding Tasks
 
-implement guess authorship
+- [ ] Implement individual guessing
 
-what happens if a user disconnects
+- [ ] Implement guess authorship (so after the cards are submitted by the guessers, the ranker must guess who submitted what)
 
-Could you please update the /docs/collective_ranking.md to account for the changes you have made in this session?
+- [ ] Implement the ability for guessers to add one than one card if there are fewer than 5 guessers.
 
-Based on our session, what documentation should we write up to describe the changes that were made?
+- [ ] Could you please update the /docs/collective_ranking.md to account for the changes you have made in this session?
 
-The ability for guessers to add one than one card if there are fewer than 5 guessers.
+- [ ] Based on our session, what documentation should we write up to describe the changes that were made?

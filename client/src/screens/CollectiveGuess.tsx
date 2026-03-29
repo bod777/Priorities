@@ -12,7 +12,9 @@ export function CollectiveGuess() {
   const isRanker = lobbyState.currentRankerId === playerId;
   const hasLocked = lobbyState.submittedPlayerIds.includes(playerId);
   const isFrozen = lobbyState.submittedPlayerIds.length > 0;
-  const nonRankerCount = lobbyState.players.filter((p) => p.id !== lobbyState.currentRankerId).length;
+  const nonRankers = lobbyState.players.filter((p) => p.id !== lobbyState.currentRankerId);
+  const nonRankerCount = nonRankers.length;
+  const disconnectedCount = nonRankers.filter((p) => !p.connected).length;
   const lockedCount = lobbyState.submittedPlayerIds.length;
   const ranker = lobbyState.players.find((p) => p.id === lobbyState.currentRankerId);
 
@@ -77,6 +79,9 @@ export function CollectiveGuess() {
                     <p className="text-green-800 text-center font-medium">Locked!</p>
                     <p className="text-green-600 text-center text-sm mt-1">
                       {lockedCount} / {nonRankerCount} locked
+                      {disconnectedCount > 0 && (
+                        <span className="text-gray-400 ml-1">· {disconnectedCount} disconnected</span>
+                      )}
                     </p>
                   </div>
                   <button
@@ -95,6 +100,9 @@ export function CollectiveGuess() {
               </p>
               <p className="text-blue-600 text-center mt-2">
                 {lockedCount} / {nonRankerCount} locked
+                {disconnectedCount > 0 && (
+                  <span className="text-gray-400 ml-1">· {disconnectedCount} disconnected</span>
+                )}
               </p>
             </div>
           )}

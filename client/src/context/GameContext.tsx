@@ -1,7 +1,7 @@
 import { createContext, useContext, useReducer, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { LobbyState, TurnResult, GameOverData } from '../../../shared/src/types.ts';
-import { useSocket } from '../hooks/useSocket.ts';
+import { useSocket, saveReconnectInfo, clearReconnectInfo } from '../hooks/useSocket.ts';
 
 interface GameContextState {
   playerId: string | null;
@@ -76,8 +76,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     console.log('GameContext: Registering socket event listeners', socket);
 
-    const handleLobbyCreated = (data: { lobbyCode: string; playerId: string }) => {
+    const handleLobbyCreated = (data: { lobbyCode: string; playerId: string; reconnectToken: string }) => {
       console.log('Lobby created:', data);
+      saveReconnectInfo(data.reconnectToken, data.lobbyCode);
       dispatch({
         type: 'SET_PLAYER',
         playerId: data.playerId,
@@ -85,13 +86,26 @@ export function GameProvider({ children }: { children: ReactNode }) {
       });
     };
 
-    const handleLobbyJoined = (data: { playerId: string }) => {
+    const handleLobbyJoined = (data: { playerId: string; lobbyCode: string; reconnectToken: string }) => {
       console.log('Lobby joined:', data);
+      saveReconnectInfo(data.reconnectToken, data.lobbyCode);
       dispatch({
         type: 'SET_PLAYER',
         playerId: data.playerId,
         displayName: stateRef.current.displayName || ''
       });
+    };
+
+    const handleReconnectSuccess = (data: LobbyState & { playerId: string; reconnectToken: string }) => {
+      console.log('Reconnect success:', data);
+      saveReconnectInfo(data.reconnectToken, data.lobbyCode);
+      dispatch({ type: 'SET_PLAYER', playerId: data.playerId, displayName: stateRef.current.displayName || '' });
+      dispatch({ type: 'SET_LOBBY', lobbyState: data });
+    };
+
+    const handleReconnectFailed = (data: { message: string }) => {
+      console.warn('Reconnect failed:', data.message);
+      clearReconnectInfo();
     };
 
     const handleLobbyUpdated = (data: LobbyState) => {
@@ -155,6 +169,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     socket.on('lobby-created', handleLobbyCreated);
     socket.on('lobby-joined', handleLobbyJoined);
+    socket.on('reconnect-success', handleReconnectSuccess);
+    socket.on('reconnect-failed', handleReconnectFailed);
     socket.on('lobby-updated', handleLobbyUpdated);
     socket.on('phase-changed', handlePhaseChanged);
     socket.on('player-submitted', handlePlayerSubmitted);
@@ -167,10 +183,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return () => {
       socket.off('lobby-created', handleLobbyCreated);
       socket.off('lobby-joined', handleLobbyJoined);
+      socket.off('reconnect-success', handleReconnectSuccess);
+      socket.off('reconnect-failed', handleReconnectFailed);
       socket.off('lobby-updated', handleLobbyUpdated);
       socket.off('phase-changed', handlePhaseChanged);
       socket.off('player-submitted', handlePlayerSubmitted);
-    socket.off('player-unlocked', handlePlayerUnlocked);
+      socket.off('player-unlocked', handlePlayerUnlocked);
       socket.off('collective-guess-updated', handleCollectiveGuessUpdated);
       socket.off('reveal-results', handleRevealResults);
       socket.off('game-over', handleGameOver);

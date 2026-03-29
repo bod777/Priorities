@@ -76,11 +76,40 @@ function checkPhaseAdvance(io: Server<ClientEvents, ServerEvents>, state: Server
   }
 }
 
+const AUTO_SUBMIT_DELAY_MS = 60_000;
+
 function handleAutoSubmit(io: Server<ClientEvents, ServerEvents>, state: ServerGameState, playerId: string): void {
+  state.pendingTimers.delete(playerId);
+
   if (state.phase === 'card_submission' && playerId !== state.currentRankerId) {
-    state.cards.push(createPlayerCard('...', playerId));
-    state.submittedPlayerIds.add(playerId);
-    checkPhaseAdvance(io, state);
+    if (!state.submittedPlayerIds.has(playerId)) {
+      state.cards.push(createPlayerCard('...', playerId));
+      state.submittedPlayerIds.add(playerId);
+      checkPhaseAdvance(io, state);
+    }
+    return;
+  }
+
+  if (state.phase === 'ranking' && playerId === state.currentRankerId) {
+    const shuffled = [...state.cards.map((c) => c.id)].sort(() => Math.random() - 0.5);
+    state.rankerRanking = shuffled;
+    advancePhase(state);
+    io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
+    return;
+  }
+
+  if (state.phase === 'guessing' && playerId !== state.currentRankerId) {
+    if (!state.submittedPlayerIds.has(playerId)) {
+      state.submittedPlayerIds.add(playerId);
+      io.to(state.lobbyCode).emit('player-submitted', { playerId });
+      const nonRankerCount = state.players.size - 1;
+      if (state.submittedPlayerIds.size >= nonRankerCount) {
+        advancePhase(state);
+        emitRevealResults(io, state);
+        io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
+      }
+    }
+    return;
   }
 }
 
@@ -229,16 +258,27 @@ export function registerGameHandlers(
 
     io.to(state.lobbyCode).emit('lobby-updated', toLobbyState(state));
 
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       const currentState = lobbies.get(state.lobbyCode);
       if (!currentState) return;
       const p = currentState.players.get(socket.id);
       if (!p || p.connected) return;
 
-      if (!currentState.submittedPlayerIds.has(socket.id)) {
-        handleAutoSubmit(io, currentState, socket.id);
+      if (currentState.hostId === socket.id) {
+        const nextConnected = Array.from(currentState.players.values()).find(
+          (pl) => pl.id !== socket.id && pl.connected
+        );
+        if (nextConnected) {
+          nextConnected.isHost = true;
+          currentState.hostId = nextConnected.id;
+          io.to(currentState.lobbyCode).emit('lobby-updated', toLobbyState(currentState));
+        }
       }
-    }, 30000);
+
+      handleAutoSubmit(io, currentState, socket.id);
+    }, AUTO_SUBMIT_DELAY_MS);
+
+    state.pendingTimers.set(socket.id, timer);
   });
 }
 

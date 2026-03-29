@@ -27,6 +27,13 @@ export function useSocket() {
     socket.on('connect', () => {
       console.log('Socket connected');
       setConnected(true);
+
+      const token = localStorage.getItem('priorities_reconnect_token');
+      const lobbyCode = localStorage.getItem('priorities_reconnect_lobby');
+      if (token && lobbyCode) {
+        console.log('Attempting reconnect with token');
+        socket.emit('reconnect-player', { token, lobbyCode });
+      }
     });
     socket.on('disconnect', () => {
       console.log('Socket disconnected');
@@ -44,4 +51,14 @@ export function useSocket() {
   }, [socket]);
 
   return { socket, connected };
+}
+
+export function saveReconnectInfo(token: string, lobbyCode: string): void {
+  localStorage.setItem('priorities_reconnect_token', token);
+  localStorage.setItem('priorities_reconnect_lobby', lobbyCode);
+}
+
+export function clearReconnectInfo(): void {
+  localStorage.removeItem('priorities_reconnect_token');
+  localStorage.removeItem('priorities_reconnect_lobby');
 }
