@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(npm run build:*)",
-      "Bash(npm run typecheck:*)"
+      "Bash(npm run typecheck:*)",
+      "Bash(netstat:*)",
+      "Bash(grep -l \"currentRound\\\\|totalRounds\\\\|roundCount\\\\|roundNumber\\\\|roundHistory\\\\|startRound\\\\|next-round\\\\|RoundResult\\\\|roundResult\" /c/Users/brido/Sandbox/Personal/Priorities/client/src/screens/*.tsx)"
     ]
   }
 }

@@ -8,18 +8,15 @@ export interface ServerGameState {
   settings: GameSettings;
   players: Map<string, Player>;
   phase: GamePhase;
-  currentRound: number;
+  currentTurn: number;
   rankerOrder: string[];
   currentRankerId: string | null;
   cards: CardFull[];
   rankerRanking: string[] | null;
-  guesses: Map<string, string[]>;
   collectiveGuess: string[] | null;
-  authorshipGuesses: Record<string, string> | null;
-  personalRankings: Map<string, string[]>;
   scores: Map<string, number>;
   rankerStats: Map<string, number[]>;
-  roundHistory: import('../../shared/src/types.js').RoundResult[];
+  turnHistory: import('../../shared/src/types.js').TurnResult[];
   submittedPlayerIds: Set<string>;
 }
 
@@ -52,18 +49,15 @@ export function createLobby(hostSocketId: string, displayName: string, settings:
     settings,
     players: new Map([[hostSocketId, player]]),
     phase: 'lobby',
-    currentRound: 0,
-    rankerOrder: [],
+    currentTurn: 0,
+    rankerOrder: [hostSocketId],
     currentRankerId: null,
     cards: [],
     rankerRanking: null,
-    guesses: new Map(),
     collectiveGuess: null,
-    authorshipGuesses: null,
-    personalRankings: new Map(),
     scores: new Map([[hostSocketId, 0]]),
     rankerStats: new Map(),
-    roundHistory: [],
+    turnHistory: [],
     submittedPlayerIds: new Set(),
   };
 
@@ -86,6 +80,7 @@ export function joinLobby(code: string, socketId: string, displayName: string): 
   };
 
   state.players.set(socketId, player);
+  state.rankerOrder.push(socketId);
   state.scores.set(socketId, 0);
   socketToLobby.set(socketId, code);
   return state;
@@ -104,8 +99,9 @@ export function toLobbyState(state: ServerGameState): LobbyState {
     settings: state.settings,
     players: Array.from(state.players.values()),
     phase: state.phase,
-    currentRound: state.currentRound,
-    totalRounds: state.settings.roundCount,
+    currentTurn: state.currentTurn,
+    totalTurns: state.settings.roundCount * state.rankerOrder.length,
+    rankerOrder: state.rankerOrder,
     currentRankerId: state.currentRankerId,
     cards: state.cards.map((c) => ({ id: c.id, text: c.text })),
     submittedPlayerIds: Array.from(state.submittedPlayerIds),

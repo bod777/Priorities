@@ -1,10 +1,14 @@
 import { useGame } from '../context/GameContext.tsx';
+import { useSocket } from '../hooks/useSocket.ts';
 
 export function GameOver() {
   const { state } = useGame();
-  const { gameOverData, lobbyState } = state;
+  const { socket } = useSocket();
+  const { gameOverData, lobbyState, playerId } = state;
 
   if (!gameOverData || !lobbyState) return null;
+
+  const isHost = lobbyState.hostId === playerId;
 
   const sortedFinalScores = Object.entries(gameOverData.finalScores)
     .map(([playerId, totalScore]) => ({ playerId, totalScore }))
@@ -96,12 +100,18 @@ export function GameOver() {
           </div>
 
           <div className="mt-8 text-center">
-            <button
-              onClick={() => window.location.reload()}
-              className="bg-purple-600 text-white py-3 px-8 rounded-lg font-semibold hover:bg-purple-700 transition"
-            >
-              Play Again
-            </button>
+            {isHost ? (
+              <button
+                onClick={() => socket?.emit('reset-game')}
+                className="bg-purple-600 text-white py-3 px-8 rounded-lg font-semibold hover:bg-purple-700 transition"
+              >
+                Play Again
+              </button>
+            ) : (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-blue-800">Waiting for host to start a new game...</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

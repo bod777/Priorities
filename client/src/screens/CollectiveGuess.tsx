@@ -11,16 +11,24 @@ export function CollectiveGuess() {
 
   const isRanker = lobbyState.currentRankerId === playerId;
   const hasLocked = lobbyState.submittedPlayerIds.includes(playerId);
+  const isFrozen = lobbyState.submittedPlayerIds.length > 0;
+  const nonRankerCount = lobbyState.players.filter((p) => p.id !== lobbyState.currentRankerId).length;
+  const lockedCount = lobbyState.submittedPlayerIds.length;
   const ranker = lobbyState.players.find((p) => p.id === lobbyState.currentRankerId);
 
   const handleUpdateGuess = (newRanking: string[]) => {
-    if (!socket || isRanker || hasLocked) return;
+    if (!socket || isRanker || isFrozen) return;
     socket.emit('update-collective-guess', { ranking: newRanking });
   };
 
   const handleLock = () => {
     if (!socket || isRanker) return;
     socket.emit('lock-collective-guess');
+  };
+
+  const handleUnlock = () => {
+    if (!socket || isRanker) return;
+    socket.emit('unlock-collective-guess');
   };
 
   return (
@@ -30,7 +38,10 @@ export function CollectiveGuess() {
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-purple-600">Collective Guess</h1>
             <p className="text-gray-600 mt-2">
-              Round {lobbyState.currentRound} of {lobbyState.totalRounds}
+              Turn {lobbyState.currentTurn} of {lobbyState.totalTurns}
+              <span className="text-gray-400 ml-2">
+                · Round {Math.ceil(lobbyState.currentTurn / lobbyState.rankerOrder.length)} of {Math.ceil(lobbyState.totalTurns / lobbyState.rankerOrder.length)}
+              </span>
             </p>
           </div>
 
@@ -40,11 +51,17 @@ export function CollectiveGuess() {
                 Work together to guess how {ranker?.displayName} ranked these cards!
               </p>
 
+              {isFrozen && !hasLocked && (
+                <div className="bg-yellow-50 border border-yellow-300 rounded-lg px-4 py-2 text-sm text-yellow-800">
+                  Order locked by another player — waiting for everyone to confirm.
+                </div>
+              )}
+
               <RankingBoard
                 cards={lobbyState.cards}
                 ranking={lobbyState.collectiveGuessOrder}
                 onRankingChange={handleUpdateGuess}
-                disabled={hasLocked}
+                disabled={isFrozen}
               />
 
               {!hasLocked ? (
@@ -55,15 +72,19 @@ export function CollectiveGuess() {
                   Lock In Guess
                 </button>
               ) : (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <p className="text-green-800 text-center font-medium">
-                    Locked! Waiting for others...
-                  </p>
-                  <p className="text-green-600 text-center mt-2">
-                    {lobbyState.submittedPlayerIds.length} /{' '}
-                    {lobbyState.players.filter((p) => p.id !== lobbyState.currentRankerId).length}{' '}
-                    locked
-                  </p>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+                  <div>
+                    <p className="text-green-800 text-center font-medium">Locked!</p>
+                    <p className="text-green-600 text-center text-sm mt-1">
+                      {lockedCount} / {nonRankerCount} locked
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleUnlock}
+                    className="w-full border border-green-400 text-green-700 py-2 px-4 rounded-lg text-sm font-medium hover:bg-green-100 transition"
+                  >
+                    Unlock
+                  </button>
                 </div>
               )}
             </div>
@@ -73,9 +94,7 @@ export function CollectiveGuess() {
                 Waiting for other players to collectively guess your ranking...
               </p>
               <p className="text-blue-600 text-center mt-2">
-                {lobbyState.submittedPlayerIds.length} /{' '}
-                {lobbyState.players.filter((p) => p.id !== lobbyState.currentRankerId).length}{' '}
-                locked
+                {lockedCount} / {nonRankerCount} locked
               </p>
             </div>
           )}

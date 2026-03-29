@@ -8,16 +8,14 @@ export function Guessing() {
   const { state } = useGame();
   const { lobbyState, playerId } = state;
 
-  const [guess, setGuess] = useState<string[]>([]);
+  const [guess, setGuess] = useState<string[]>(() =>
+    lobbyState?.cards.map((c) => c.id) ?? []
+  );
 
   if (!lobbyState || !playerId) return null;
 
   const isRanker = lobbyState.currentRankerId === playerId;
   const hasSubmitted = lobbyState.submittedPlayerIds.includes(playerId);
-
-  if (guess.length === 0 && lobbyState.cards.length > 0) {
-    setGuess(lobbyState.cards.map((c) => c.id));
-  }
 
   const handleSubmit = () => {
     if (!socket || isRanker) return;

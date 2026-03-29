@@ -33,7 +33,10 @@ export function Ranking() {
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-purple-600">Ranking Phase</h1>
             <p className="text-gray-600 mt-2">
-              Round {lobbyState.currentRound} of {lobbyState.totalRounds}
+              Turn {lobbyState.currentTurn} of {lobbyState.totalTurns}
+              <span className="text-gray-400 ml-2">
+                · Round {Math.ceil(lobbyState.currentTurn / lobbyState.rankerOrder.length)} of {Math.ceil(lobbyState.totalTurns / lobbyState.rankerOrder.length)}
+              </span>
             </p>
           </div>
 

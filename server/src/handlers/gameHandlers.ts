@@ -1,30 +1,19 @@
 import type { Server, Socket } from 'socket.io';
-import type { ClientEvents, ServerEvents, RoundResult } from '../../../shared/src/types.js';
+import type { ClientEvents, ServerEvents, TurnResult } from '../../../shared/src/types.js';
 import { getLobbyForSocket, toLobbyState, type ServerGameState, lobbies, socketToLobby } from '../lobby.js';
 import { createPlayerCard } from '../cards.js';
 import { startGame, advancePhase } from '../game.js';
-import { calculateScore, calculateAuthorshipScore } from '../scoring.js';
+import { calculateScore } from '../scoring.js';
 
 function emitRevealResults(io: Server<ClientEvents, ServerEvents>, state: ServerGameState): void {
   const trueRanking = state.rankerRanking!;
-  const roundScores: Record<string, number> = {};
+  const turnScores: Record<string, number> = {};
 
-  if (state.settings.guessingMode === 'individual') {
-    for (const [playerId, guess] of state.guesses) {
-      const score = calculateScore(trueRanking, guess);
-      roundScores[playerId] = score;
-      state.scores.set(playerId, (state.scores.get(playerId) || 0) + score);
-
-      if (!state.rankerStats.has(state.currentRankerId!)) {
-        state.rankerStats.set(state.currentRankerId!, []);
-      }
-      state.rankerStats.get(state.currentRankerId!)!.push(score);
-    }
-  } else if (state.collectiveGuess) {
+  if (state.collectiveGuess) {
     const score = calculateScore(trueRanking, state.collectiveGuess);
     for (const [playerId] of state.players) {
       if (playerId !== state.currentRankerId) {
-        roundScores[playerId] = score;
+        turnScores[playerId] = score;
         state.scores.set(playerId, (state.scores.get(playerId) || 0) + score);
       }
     }
@@ -34,31 +23,17 @@ function emitRevealResults(io: Server<ClientEvents, ServerEvents>, state: Server
     state.rankerStats.get(state.currentRankerId!)!.push(score);
   }
 
-  const result: RoundResult = {
-    roundNumber: state.currentRound,
+  const result: TurnResult = {
+    turnNumber: state.currentTurn,
     rankerId: state.currentRankerId!,
     cards: state.cards.map((c) => ({ id: c.id, text: c.text })),
     trueRanking,
-    guesses: Object.fromEntries(state.guesses),
     collectiveGuess: state.collectiveGuess,
-    scores: roundScores,
+    scores: turnScores,
+    totalScores: Object.fromEntries(state.scores),
   };
 
-  if (state.settings.authorshipGuess && state.authorshipGuesses) {
-    result.authorship = Object.fromEntries(
-      state.cards.map((c) => [c.id, c.authorId])
-    );
-    result.authorshipGuesses = state.authorshipGuesses;
-    result.authorshipScore = calculateAuthorshipScore(
-      state.authorshipGuesses, state.cards
-    );
-  }
-
-  if (state.settings.personalRanking && state.personalRankings.size > 0) {
-    result.personalRankings = Object.fromEntries(state.personalRankings);
-  }
-
-  state.roundHistory.push(result);
+  state.turnHistory.push(result);
   io.to(state.lobbyCode).emit('reveal-results', result);
 }
 
@@ -87,7 +62,7 @@ function emitGameOver(io: Server<ClientEvents, ServerEvents>, state: ServerGameS
 
   io.to(state.lobbyCode).emit('game-over', {
     finalScores,
-    roundHistory: state.roundHistory,
+    turnHistory: state.turnHistory,
     superlatives: { mostPredictable, leastPredictable, bestGuesser },
   });
 }
@@ -98,23 +73,12 @@ function checkPhaseAdvance(io: Server<ClientEvents, ServerEvents>, state: Server
   if (state.phase === 'card_submission' && state.submittedPlayerIds.size >= nonRankerCount) {
     advancePhase(state);
     io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
-  } else if (state.phase === 'guessing' && state.settings.guessingMode === 'individual' && state.submittedPlayerIds.size >= nonRankerCount) {
-    advancePhase(state);
-    io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
-  } else if (state.phase === 'personal_ranking' && state.submittedPlayerIds.size >= state.players.size) {
-    advancePhase(state);
-    io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
   }
 }
 
 function handleAutoSubmit(io: Server<ClientEvents, ServerEvents>, state: ServerGameState, playerId: string): void {
   if (state.phase === 'card_submission' && playerId !== state.currentRankerId) {
     state.cards.push(createPlayerCard('...', playerId));
-    state.submittedPlayerIds.add(playerId);
-    checkPhaseAdvance(io, state);
-  } else if (state.phase === 'guessing' && playerId !== state.currentRankerId) {
-    const randomOrder = state.cards.map((c) => c.id).sort(() => Math.random() - 0.5);
-    state.guesses.set(playerId, randomOrder);
     state.submittedPlayerIds.add(playerId);
     checkPhaseAdvance(io, state);
   }
@@ -130,6 +94,7 @@ export function registerGameHandlers(
     if (state.players.size < 3) return;
 
     startGame(state);
+    console.log(`Game started in lobby ${state.lobbyCode}, ranker: ${state.currentRankerId}`);
     io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
   });
 
@@ -146,6 +111,7 @@ export function registerGameHandlers(
 
     const nonRankerCount = state.players.size - 1;
     if (state.submittedPlayerIds.size >= nonRankerCount) {
+      console.log('All cards submitted, advancing phase');
       advancePhase(state);
       io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
     }
@@ -162,85 +128,65 @@ export function registerGameHandlers(
     io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
   });
 
-  socket.on('submit-guess', ({ ranking }) => {
-    const state = getLobbyForSocket(socket.id);
-    if (!state || state.phase !== 'guessing') return;
-    if (socket.id === state.currentRankerId) return;
-    if (state.submittedPlayerIds.has(socket.id)) return;
-    if (ranking.length !== 5) return;
-
-    state.guesses.set(socket.id, ranking);
-    state.submittedPlayerIds.add(socket.id);
-
-    io.to(state.lobbyCode).emit('player-submitted', { playerId: socket.id });
-
-    const nonRankerCount = state.players.size - 1;
-    if (state.submittedPlayerIds.size >= nonRankerCount) {
-      advancePhase(state);
-      if ((state as ServerGameState).phase === 'reveal') {
-        emitRevealResults(io, state);
-      }
-      io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
-    }
-  });
-
-  socket.on('submit-personal-ranking', ({ ranking }) => {
-    const state = getLobbyForSocket(socket.id);
-    if (!state || state.phase !== 'personal_ranking') return;
-    if (state.submittedPlayerIds.has(socket.id)) return;
-
-    state.personalRankings.set(socket.id, ranking);
-    state.submittedPlayerIds.add(socket.id);
-
-    io.to(state.lobbyCode).emit('player-submitted', { playerId: socket.id });
-
-    if (state.submittedPlayerIds.size >= state.players.size) {
-      advancePhase(state);
-      if ((state as ServerGameState).phase === 'reveal') {
-        emitRevealResults(io, state);
-      }
-      io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
-    }
-  });
-
   socket.on('update-collective-guess', ({ ranking }) => {
     const state = getLobbyForSocket(socket.id);
     if (!state || state.phase !== 'guessing') return;
-    if (state.settings.guessingMode !== 'collective') return;
     if (socket.id === state.currentRankerId) return;
+    if (state.submittedPlayerIds.size > 0) return;
 
     state.collectiveGuess = ranking;
-    socket.to(state.lobbyCode).emit('collective-guess-updated', { ranking });
+    io.to(state.lobbyCode).emit('collective-guess-updated', { ranking });
+  });
+
+  socket.on('unlock-collective-guess', () => {
+    const state = getLobbyForSocket(socket.id);
+    if (!state || state.phase !== 'guessing') return;
+    if (socket.id === state.currentRankerId) return;
+    if (!state.submittedPlayerIds.has(socket.id)) return;
+
+    state.submittedPlayerIds.delete(socket.id);
+    io.to(state.lobbyCode).emit('lobby-updated', toLobbyState(state));
   });
 
   socket.on('lock-collective-guess', () => {
     const state = getLobbyForSocket(socket.id);
     if (!state || state.phase !== 'guessing') return;
-    if (state.settings.guessingMode !== 'collective') return;
     if (!state.collectiveGuess) return;
+    if (socket.id === state.currentRankerId) return;
+    if (state.submittedPlayerIds.has(socket.id)) return;
 
-    advancePhase(state);
-    io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
+    state.submittedPlayerIds.add(socket.id);
+    io.to(state.lobbyCode).emit('player-submitted', { playerId: socket.id });
+
+    const nonRankerCount = state.players.size - 1;
+    if (state.submittedPlayerIds.size >= nonRankerCount) {
+      advancePhase(state);
+      emitRevealResults(io, state);
+      io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
+    }
   });
 
-  socket.on('submit-authorship-guess', ({ guesses }) => {
+  socket.on('reset-game', () => {
     const state = getLobbyForSocket(socket.id);
-    if (!state || state.phase !== 'authorship_guess') return;
-    if (socket.id !== state.currentRankerId) return;
+    if (!state || state.hostId !== socket.id) return;
 
-    state.authorshipGuesses = guesses;
-    advancePhase(state);
-    io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
+    state.phase = 'lobby';
+    state.currentTurn = 0;
+    state.currentRankerId = null;
+    state.cards = [];
+    state.rankerRanking = null;
+    state.collectiveGuess = null;
+    state.submittedPlayerIds = new Set();
+    state.turnHistory = [];
+    state.rankerStats = new Map();
+    for (const id of state.scores.keys()) {
+      state.scores.set(id, 0);
+    }
 
-    setTimeout(() => {
-      const currentState = lobbies.get(state.lobbyCode);
-      if (!currentState || currentState.phase !== 'authorship_reveal') return;
-      advancePhase(currentState);
-      io.to(currentState.lobbyCode).emit('phase-changed', toLobbyState(currentState));
-    }, 8000);
+    io.to(state.lobbyCode).emit('lobby-updated', toLobbyState(state));
   });
 
-  socket.on('next-round', () => {
+  socket.on('next-turn', () => {
     const state = getLobbyForSocket(socket.id);
     if (!state || state.phase !== 'reveal') return;
     if (socket.id !== state.hostId) return;
@@ -265,6 +211,7 @@ export function registerGameHandlers(
 
     if (state.phase === 'lobby') {
       state.players.delete(socket.id);
+      state.rankerOrder = state.rankerOrder.filter((id) => id !== socket.id);
       state.scores.delete(socket.id);
       socketToLobby.delete(socket.id);
 

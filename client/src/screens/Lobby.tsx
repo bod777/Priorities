@@ -1,7 +1,48 @@
 import { useState } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useSocket } from '../hooks/useSocket.ts';
 import { useGame } from '../context/GameContext.tsx';
-import type { GameSettings } from '../../../shared/src/types.ts';
+import type { GameSettings, Player } from '../../../shared/src/types.ts';
+
+function SortablePlayer({ player, index }: { player: Player; index: number }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: player.id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-3 cursor-move hover:bg-gray-100 transition">
+        <span className="text-sm font-bold text-purple-400 w-5 text-center">{index + 1}</span>
+        <span className="font-medium flex-1">{player.displayName}</span>
+        {player.isHost && (
+          <span className="bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full text-xs">Host</span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function Lobby() {
   const { socket } = useSocket();
@@ -10,12 +51,14 @@ export function Lobby() {
 
   const [localSettings, setLocalSettings] = useState<GameSettings>(
     lobbyState?.settings || {
-      guessingMode: 'collective',
-      authorshipGuess: true,
-      personalRanking: true,
       promptsEnabled: false,
-      roundCount: 3,
+      roundCount: 1,
     }
+  );
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
   if (!lobbyState || !playerId) return null;
@@ -30,10 +73,25 @@ export function Lobby() {
     socket.emit('update-settings', { settings: updates });
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !socket) return;
+
+    const oldIndex = lobbyState.rankerOrder.indexOf(active.id as string);
+    const newIndex = lobbyState.rankerOrder.indexOf(over.id as string);
+    const newOrder = arrayMove(lobbyState.rankerOrder, oldIndex, newIndex);
+    socket.emit('update-ranker-order', { order: newOrder });
+  };
+
   const handleStartGame = () => {
     if (!socket || !isHost || !canStart) return;
     socket.emit('start-game');
   };
+
+  // Build ordered player list from rankerOrder (may lag a frame behind for non-hosts)
+  const orderedPlayers = lobbyState.rankerOrder
+    .map((id) => lobbyState.players.find((p) => p.id === id))
+    .filter((p): p is Player => p !== undefined);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-500 to-pink-500 p-4">
@@ -43,107 +101,80 @@ export function Lobby() {
             <h1 className="text-3xl font-bold text-purple-600">Lobby</h1>
             <div className="text-right">
               <div className="text-sm text-gray-500">Lobby Code</div>
-              <div className="text-2xl font-bold text-purple-600">{lobbyState.lobbyCode}</div>
+              <div className="flex items-center gap-2 justify-end">
+                <div className="text-2xl font-bold text-purple-600">{lobbyState.lobbyCode}</div>
+                <button
+                  onClick={() => navigator.clipboard.writeText(lobbyState.lobbyCode)}
+                  className="text-gray-400 hover:text-purple-600 transition"
+                  title="Copy lobby code"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
 
           <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-3">Players ({lobbyState.players.length}/6)</h2>
-            <div className="space-y-2">
-              {lobbyState.players.map((player) => (
-                <div
-                  key={player.id}
-                  className={`flex items-center justify-between bg-gray-50 rounded-lg p-3 ${
-                    !player.connected ? 'opacity-50' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    {!player.connected && (
-                      <span className="text-red-500 text-xs">●</span>
-                    )}
-                    <span className="font-medium">{player.displayName}</span>
+            <h2 className="text-xl font-semibold mb-1">Ranker Order</h2>
+            <p className="text-sm text-gray-500 mb-3">
+              {isHost ? 'Drag to set the order players will take their turn as ranker.' : 'The order players will take their turn as ranker.'}
+            </p>
+
+            {isHost ? (
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={lobbyState.rankerOrder} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-2">
+                    {orderedPlayers.map((player, index) => (
+                      <SortablePlayer key={player.id} player={player} index={index} />
+                    ))}
                   </div>
-                  {player.isHost && (
-                    <span className="bg-purple-100 text-purple-600 px-3 py-1 rounded-full text-sm">
-                      Host
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
+                </SortableContext>
+              </DndContext>
+            ) : (
+              <div className="space-y-2">
+                {orderedPlayers.map((player, index) => (
+                  <div key={player.id} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+                    <span className="text-sm font-bold text-purple-400 w-5 text-center">{index + 1}</span>
+                    <span className="font-medium flex-1">{player.displayName}</span>
+                    {player.isHost && (
+                      <span className="bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full text-xs">Host</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {isHost && (
-            <div className="space-y-4 mb-6">
-              <h2 className="text-xl font-semibold">Game Settings</h2>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Rounds: {localSettings.roundCount}
-                </label>
+          <div className="space-y-4 mb-6">
+            <h2 className="text-xl font-semibold">Game Settings</h2>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Rounds: {lobbyState.settings.roundCount}
+                <span className="text-gray-400 font-normal ml-2">
+                  ({lobbyState.settings.roundCount * lobbyState.players.length} turn{lobbyState.settings.roundCount * lobbyState.players.length !== 1 ? 's' : ''})
+                </span>
+              </label>
+              {isHost ? (
                 <input
                   type="range"
                   min="1"
-                  max="10"
+                  max="5"
                   value={localSettings.roundCount}
-                  onChange={(e) =>
-                    handleUpdateSettings({ roundCount: parseInt(e.target.value) })
-                  }
+                  onChange={(e) => handleUpdateSettings({ roundCount: parseInt(e.target.value) })}
                   className="w-full"
                 />
-              </div>
-
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={localSettings.guessingMode === 'collective'}
-                    onChange={(e) =>
-                      handleUpdateSettings({ guessingMode: e.target.checked ? 'collective' : 'individual' })
-                    }
-                    className="mr-2"
+              ) : (
+                <div className="w-full bg-gray-100 rounded-full h-2">
+                  <div
+                    className="bg-purple-400 h-2 rounded-full"
+                    style={{ width: `${((lobbyState.settings.roundCount - 1) / 4) * 100}%` }}
                   />
-                  <span className="text-sm">Collective Guessing Mode</span>
-                </label>
-
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={localSettings.authorshipGuess}
-                    onChange={(e) =>
-                      handleUpdateSettings({ authorshipGuess: e.target.checked })
-                    }
-                    className="mr-2"
-                  />
-                  <span className="text-sm">Authorship Guess</span>
-                </label>
-
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={localSettings.personalRanking}
-                    onChange={(e) =>
-                      handleUpdateSettings({ personalRanking: e.target.checked })
-                    }
-                    className="mr-2"
-                  />
-                  <span className="text-sm">Personal Ranking</span>
-                </label>
-
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={localSettings.promptsEnabled}
-                    onChange={(e) =>
-                      handleUpdateSettings({ promptsEnabled: e.target.checked })
-                    }
-                    className="mr-2"
-                  />
-                  <span className="text-sm">Prompts Enabled</span>
-                </label>
-              </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
 
           {!isHost && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">

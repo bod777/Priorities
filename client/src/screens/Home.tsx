@@ -11,17 +11,18 @@ export function Home() {
   const [mode, setMode] = useState<'menu' | 'create' | 'join'>('menu');
 
   const defaultSettings: GameSettings = {
-    guessingMode: 'collective',
-    authorshipGuess: true,
-    personalRanking: true,
     promptsEnabled: false,
-    roundCount: 3,
+    roundCount: 1,
   };
 
   const handleCreateLobby = () => {
     if (!socket || !displayName.trim()) return;
+    console.log('Creating lobby with name:', displayName.trim());
+    console.log('Socket:', socket);
+    console.log('Socket connected:', socket.connected);
     dispatch({ type: 'SET_PLAYER', playerId: '', displayName: displayName.trim() });
     socket.emit('create-lobby', { displayName: displayName.trim(), settings: defaultSettings });
+    console.log('Emitted create-lobby event');
   };
 
   const handleJoinLobby = () => {

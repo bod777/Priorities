@@ -1,18 +1,12 @@
 export type GamePhase =
   | 'lobby'
   | 'card_submission'
-  | 'authorship_guess'
-  | 'authorship_reveal'
   | 'ranking'
   | 'guessing'
-  | 'personal_ranking'
   | 'reveal'
   | 'game_over';
 
 export interface GameSettings {
-  guessingMode: 'collective' | 'individual';
-  authorshipGuess: boolean;
-  personalRanking: boolean;
   promptsEnabled: boolean;
   roundCount: number;
 }
@@ -33,18 +27,14 @@ export interface CardFull extends CardPublic {
   authorId: string | null;
 }
 
-export interface RoundResult {
-  roundNumber: number;
+export interface TurnResult {
+  turnNumber: number;
   rankerId: string;
   cards: CardPublic[];
   trueRanking: string[];
-  guesses: Record<string, string[]>;
   collectiveGuess: string[] | null;
   scores: Record<string, number>;
-  authorship?: Record<string, string | null>;
-  authorshipGuesses?: Record<string, string>;
-  authorshipScore?: number;
-  personalRankings?: Record<string, string[]>;
+  totalScores: Record<string, number>;
 }
 
 export interface LobbyState {
@@ -53,8 +43,9 @@ export interface LobbyState {
   settings: GameSettings;
   players: Player[];
   phase: GamePhase;
-  currentRound: number;
-  totalRounds: number;
+  currentTurn: number;
+  totalTurns: number;
+  rankerOrder: string[];
   currentRankerId: string | null;
   cards: CardPublic[];
   submittedPlayerIds: string[];
@@ -69,7 +60,7 @@ export interface Superlatives {
 
 export interface GameOverData {
   finalScores: Record<string, number>;
-  roundHistory: RoundResult[];
+  turnHistory: TurnResult[];
   superlatives: Superlatives;
 }
 
@@ -77,15 +68,15 @@ export interface ClientEvents {
   'create-lobby': (data: { displayName: string; settings: GameSettings }) => void;
   'join-lobby': (data: { code: string; displayName: string }) => void;
   'update-settings': (data: { settings: Partial<GameSettings> }) => void;
+  'update-ranker-order': (data: { order: string[] }) => void;
   'start-game': () => void;
   'submit-card': (data: { text: string }) => void;
   'submit-ranking': (data: { ranking: string[] }) => void;
-  'submit-guess': (data: { ranking: string[] }) => void;
-  'submit-authorship-guess': (data: { guesses: Record<string, string> }) => void;
-  'submit-personal-ranking': (data: { ranking: string[] }) => void;
   'update-collective-guess': (data: { ranking: string[] }) => void;
   'lock-collective-guess': () => void;
-  'next-round': () => void;
+  'unlock-collective-guess': () => void;
+  'next-turn': () => void;
+  'reset-game': () => void;
 }
 
 export interface ServerEvents {
@@ -94,8 +85,9 @@ export interface ServerEvents {
   'lobby-updated': (data: LobbyState) => void;
   'phase-changed': (data: LobbyState) => void;
   'player-submitted': (data: { playerId: string }) => void;
+  'player-unlocked': (data: { playerId: string }) => void;
   'collective-guess-updated': (data: { ranking: string[] }) => void;
-  'reveal-results': (data: RoundResult) => void;
+  'reveal-results': (data: TurnResult) => void;
   'game-over': (data: GameOverData) => void;
   'error': (data: { message: string }) => void;
 }
