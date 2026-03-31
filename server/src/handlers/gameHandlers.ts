@@ -266,24 +266,6 @@ export function registerGameHandlers(
       player.connected = false;
     }
 
-    if (state.phase === 'lobby') {
-      state.players.delete(socket.id);
-      state.rankerOrder = state.rankerOrder.filter((id) => id !== socket.id);
-      state.scores.delete(socket.id);
-      socketToLobby.delete(socket.id);
-
-      if (state.hostId === socket.id && state.players.size > 0) {
-        const newHost = state.players.values().next().value!;
-        newHost.isHost = true;
-        state.hostId = newHost.id;
-      }
-
-      if (state.players.size === 0) {
-        lobbies.delete(state.lobbyCode);
-        return;
-      }
-    }
-
     io.to(state.lobbyCode).emit('lobby-updated', toLobbyState(state));
 
     const timer = setTimeout(() => {
@@ -291,6 +273,30 @@ export function registerGameHandlers(
       if (!currentState) return;
       const p = currentState.players.get(socket.id);
       if (!p || p.connected) return;
+
+      if (currentState.phase === 'lobby') {
+        // Grace period expired — fully remove the player from the lobby
+        currentState.players.delete(socket.id);
+        currentState.rankerOrder = currentState.rankerOrder.filter((id) => id !== socket.id);
+        currentState.scores.delete(socket.id);
+        socketToLobby.delete(socket.id);
+
+        if (currentState.hostId === socket.id && currentState.players.size > 0) {
+          const newHost = Array.from(currentState.players.values()).find((pl) => pl.connected);
+          if (newHost) {
+            newHost.isHost = true;
+            currentState.hostId = newHost.id;
+          }
+        }
+
+        if (currentState.players.size === 0) {
+          lobbies.delete(currentState.lobbyCode);
+          return;
+        }
+
+        io.to(currentState.lobbyCode).emit('lobby-updated', toLobbyState(currentState));
+        return;
+      }
 
       if (currentState.hostId === socket.id) {
         const nextConnected = Array.from(currentState.players.values()).find(

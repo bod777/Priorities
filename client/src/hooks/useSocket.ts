@@ -24,16 +24,19 @@ export function useSocket() {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    socket.on('connect', () => {
-      console.log('Socket connected');
-      setConnected(true);
-
+    const attemptReconnect = () => {
       const token = localStorage.getItem('priorities_reconnect_token');
       const lobbyCode = localStorage.getItem('priorities_reconnect_lobby');
       if (token && lobbyCode) {
         console.log('Attempting reconnect with token');
         socket.emit('reconnect-player', { token, lobbyCode });
       }
+    };
+
+    socket.on('connect', () => {
+      console.log('Socket connected');
+      setConnected(true);
+      attemptReconnect();
     });
     socket.on('disconnect', () => {
       console.log('Socket disconnected');
@@ -42,6 +45,7 @@ export function useSocket() {
 
     if (socket.connected) {
       setConnected(true);
+      attemptReconnect();
     }
 
     return () => {
