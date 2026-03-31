@@ -40,6 +40,21 @@ export function Ranking() {
             </p>
           </div>
 
+          {!isRanker && (
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-gray-700 mb-3">Cards to be ranked</h2>
+              <div className="space-y-2">
+                {lobbyState.cards.map((card, index) => (
+                  <div key={card.id} className="flex items-start gap-3 bg-gray-50 rounded-lg p-3">
+                    <span className="text-sm font-bold text-gray-400 w-5 flex-shrink-0">{index + 1}</span>
+                    <p className="text-gray-800">{card.text}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-sm text-gray-400 mt-3 text-center">Waiting for {ranker?.displayName} to rank these...</p>
+            </div>
+          )}
+
           {isRanker && !hasSubmitted ? (
             <div className="space-y-4">
               <p className="text-gray-700">

@@ -180,7 +180,7 @@ export function toLobbyState(state: ServerGameState): LobbyState {
     cards: state.cards.map((c) => ({ id: c.id, text: c.text })),
     submittedPlayerIds: Array.from(state.submittedPlayerIds),
     collectiveGuessOrder: state.collectiveGuess ?? [],
-    cardPool: Math.max(0, (5 - (state.players.size - 1)) - state.cards.filter(c => c.authorId !== null).length),
+    cardPool: Math.max(0, 5 - state.cards.filter(c => c.authorId !== null).length),
     playerCardCounts: Object.fromEntries(state.playerCardCounts),
   };
 }
