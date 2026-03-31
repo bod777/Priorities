@@ -8,7 +8,7 @@ export function registerLobbyHandlers(
 ) {
   socket.on('create-lobby', ({ displayName, settings }) => {
     console.log('Server: Received create-lobby event', { displayName, settings });
-    const { state, token } = createLobby(socket.id, displayName, settings);
+    const { state, token } = createLobby(socket.id, displayName.trim().toUpperCase(), settings);
     console.log('Server: Created lobby', state.lobbyCode);
     socket.join(state.lobbyCode);
     socket.emit('lobby-created', { lobbyCode: state.lobbyCode, playerId: socket.id, reconnectToken: token });
@@ -18,7 +18,7 @@ export function registerLobbyHandlers(
   });
 
   socket.on('join-lobby', ({ code, displayName }) => {
-    const result = joinLobby(code.toUpperCase(), socket.id, displayName);
+    const result = joinLobby(code.toUpperCase(), socket.id, displayName.trim().toUpperCase());
     if (!result) {
       socket.emit('error', { message: 'Lobby not found, full, or game already started.' });
       return;

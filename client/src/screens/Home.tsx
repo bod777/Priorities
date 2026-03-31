@@ -19,19 +19,19 @@ export function Home() {
   };
 
   const handleCreateLobby = () => {
-    if (!socket || !displayName.trim()) return;
-    console.log('Creating lobby with name:', displayName.trim());
+    if (!socket || !displayName.trim().toUpperCase()) return;
+    console.log('Creating lobby with name:', displayName.trim().toUpperCase());
     console.log('Socket:', socket);
     console.log('Socket connected:', socket.connected);
-    dispatch({ type: 'SET_PLAYER', playerId: '', displayName: displayName.trim() });
-    socket.emit('create-lobby', { displayName: displayName.trim(), settings: defaultSettings });
+    dispatch({ type: 'SET_PLAYER', playerId: '', displayName: displayName.trim().toUpperCase() });
+    socket.emit('create-lobby', { displayName: displayName.trim().toUpperCase(), settings: defaultSettings });
     console.log('Emitted create-lobby event');
   };
 
   const handleJoinLobby = () => {
-    if (!socket || !displayName.trim() || !lobbyCode.trim()) return;
-    dispatch({ type: 'SET_PLAYER', playerId: '', displayName: displayName.trim() });
-    socket.emit('join-lobby', { code: lobbyCode.trim().toUpperCase(), displayName: displayName.trim() });
+    if (!socket || !displayName.trim().toUpperCase() || !lobbyCode.trim()) return;
+    dispatch({ type: 'SET_PLAYER', playerId: '', displayName: displayName.trim().toUpperCase() });
+    socket.emit('join-lobby', { code: lobbyCode.trim().toUpperCase(), displayName: displayName.trim().toUpperCase() });
   };
 
   if (!connected) {
@@ -96,7 +96,7 @@ export function Home() {
             />
             <button
               onClick={handleCreateLobby}
-              disabled={!displayName.trim()}
+              disabled={!displayName.trim().toUpperCase()}
               className="w-full bg-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-purple-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               Create
@@ -132,7 +132,7 @@ export function Home() {
             />
             <button
               onClick={handleJoinLobby}
-              disabled={!displayName.trim() || !lobbyCode.trim()}
+              disabled={!displayName.trim().toUpperCase() || !lobbyCode.trim()}
               className="w-full bg-pink-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-pink-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               Join
