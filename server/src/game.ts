@@ -17,6 +17,7 @@ export function startTurn(state: ServerGameState): void {
   state.rankerRanking = null;
   state.collectiveGuess = null;
   state.submittedPlayerIds = new Set();
+  state.playerCardCounts = new Map();
 
   state.phase = 'card_submission';
 }

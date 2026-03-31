@@ -9,6 +9,7 @@ export type GamePhase =
 export interface GameSettings {
   promptsEnabled: boolean;
   roundCount: number;
+  multipleSubmissionsEnabled: boolean;
 }
 
 export interface Player {
@@ -50,6 +51,8 @@ export interface LobbyState {
   cards: CardPublic[];
   submittedPlayerIds: string[];
   collectiveGuessOrder: string[];
+  cardPool: number;
+  playerCardCounts: Record<string, number>;
 }
 
 export interface Superlatives {
@@ -72,6 +75,7 @@ export interface ClientEvents {
   'update-ranker-order': (data: { order: string[] }) => void;
   'start-game': () => void;
   'submit-card': (data: { text: string }) => void;
+  'done-submitting': () => void;
   'submit-ranking': (data: { ranking: string[] }) => void;
   'update-collective-guess': (data: { ranking: string[] }) => void;
   'lock-collective-guess': () => void;

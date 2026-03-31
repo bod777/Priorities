@@ -57,6 +57,7 @@ export function Lobby() {
     lobbyState?.settings || {
       promptsEnabled: false,
       roundCount: 1,
+      multipleSubmissionsEnabled: false,
     }
   );
 
@@ -184,6 +185,24 @@ export function Lobby() {
                     style={{ width: `${((lobbyState.settings.roundCount - 1) / 4) * 100}%` }}
                   />
                 </div>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Multiple card submissions</p>
+                <p className="text-xs text-gray-400">Guessers can submit more than one card to fill the pool</p>
+              </div>
+              {isHost ? (
+                <button
+                  onClick={() => handleUpdateSettings({ multipleSubmissionsEnabled: !localSettings.multipleSubmissionsEnabled })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${localSettings.multipleSubmissionsEnabled ? 'bg-purple-600' : 'bg-gray-300'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${localSettings.multipleSubmissionsEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              ) : (
+                <span className={`text-sm font-medium ${lobbyState.settings.multipleSubmissionsEnabled ? 'text-purple-600' : 'text-gray-400'}`}>
+                  {lobbyState.settings.multipleSubmissionsEnabled ? 'On' : 'Off'}
+                </span>
               )}
             </div>
           </div>

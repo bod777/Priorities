@@ -19,6 +19,7 @@ export interface ServerGameState {
   rankerStats: Map<string, number[]>;
   turnHistory: import('../../shared/src/types.js').TurnResult[];
   submittedPlayerIds: Set<string>;
+  playerCardCounts: Map<string, number>;
   pendingTimers: Map<string, ReturnType<typeof setTimeout>>;
   reconnectTokens: Map<string, string>;
 }
@@ -63,6 +64,7 @@ export function createLobby(hostSocketId: string, displayName: string, settings:
     rankerStats: new Map(),
     turnHistory: [],
     submittedPlayerIds: new Set(),
+    playerCardCounts: new Map(),
     pendingTimers: new Map(),
     reconnectTokens: new Map(),
   };
@@ -178,5 +180,7 @@ export function toLobbyState(state: ServerGameState): LobbyState {
     cards: state.cards.map((c) => ({ id: c.id, text: c.text })),
     submittedPlayerIds: Array.from(state.submittedPlayerIds),
     collectiveGuessOrder: state.collectiveGuess ?? [],
+    cardPool: Math.max(0, (5 - (state.players.size - 1)) - state.cards.filter(c => c.authorId !== null).length),
+    playerCardCounts: Object.fromEntries(state.playerCardCounts),
   };
 }

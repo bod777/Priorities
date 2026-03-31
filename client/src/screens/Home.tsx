@@ -16,6 +16,7 @@ export function Home() {
   const defaultSettings: GameSettings = {
     promptsEnabled: false,
     roundCount: 1,
+    multipleSubmissionsEnabled: false,
   };
 
   const handleCreateLobby = () => {

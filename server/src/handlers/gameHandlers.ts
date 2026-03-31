@@ -83,8 +83,14 @@ function handleAutoSubmit(io: Server<ClientEvents, ServerEvents>, state: ServerG
 
   if (state.phase === 'card_submission' && playerId !== state.currentRankerId) {
     if (!state.submittedPlayerIds.has(playerId)) {
-      state.cards.push(createPlayerCard('...', playerId));
+      if (!state.playerCardCounts.get(playerId)) {
+        // hasn't submitted any card yet — auto-submit a placeholder
+        state.cards.push(createPlayerCard('...', playerId));
+        state.playerCardCounts.set(playerId, 1);
+      }
+      // mark as done regardless of mode
       state.submittedPlayerIds.add(playerId);
+      io.to(state.lobbyCode).emit('lobby-updated', toLobbyState(state));
       checkPhaseAdvance(io, state);
     }
     return;
@@ -133,17 +139,39 @@ export function registerGameHandlers(
     if (socket.id === state.currentRankerId) return;
     if (state.submittedPlayerIds.has(socket.id)) return;
 
-    state.cards.push(createPlayerCard(text, socket.id));
-    state.submittedPlayerIds.add(socket.id);
-
-    io.to(state.lobbyCode).emit('player-submitted', { playerId: socket.id });
-
     const nonRankerCount = state.players.size - 1;
-    if (state.submittedPlayerIds.size >= nonRankerCount) {
-      console.log('All cards submitted, advancing phase');
-      advancePhase(state);
-      io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
+    const poolSize = Math.max(0, 5 - nonRankerCount);
+    const extraCardsInPool = state.cards.filter(c => c.authorId !== null).length - nonRankerCount;
+
+    if (state.settings.multipleSubmissionsEnabled) {
+      if (extraCardsInPool >= poolSize) return; // pool full
+    } else {
+      if (state.cards.some(c => c.authorId === socket.id)) return; // already submitted one
     }
+
+    state.cards.push(createPlayerCard(text, socket.id));
+    state.playerCardCounts.set(socket.id, (state.playerCardCounts.get(socket.id) || 0) + 1);
+
+    if (!state.settings.multipleSubmissionsEnabled) {
+      state.submittedPlayerIds.add(socket.id);
+      io.to(state.lobbyCode).emit('player-submitted', { playerId: socket.id });
+    }
+
+    io.to(state.lobbyCode).emit('lobby-updated', toLobbyState(state));
+    checkPhaseAdvance(io, state);
+  });
+
+  socket.on('done-submitting', () => {
+    const state = getLobbyForSocket(socket.id);
+    if (!state || state.phase !== 'card_submission') return;
+    if (socket.id === state.currentRankerId) return;
+    if (!state.settings.multipleSubmissionsEnabled) return;
+    if (state.submittedPlayerIds.has(socket.id)) return;
+    if (!state.playerCardCounts.get(socket.id)) return; // must have submitted at least one
+
+    state.submittedPlayerIds.add(socket.id);
+    io.to(state.lobbyCode).emit('lobby-updated', toLobbyState(state));
+    checkPhaseAdvance(io, state);
   });
 
   socket.on('submit-ranking', ({ ranking }) => {
