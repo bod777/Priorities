@@ -155,6 +155,16 @@ export function registerGameHandlers(
     if (!state.settings.multipleSubmissionsEnabled) {
       state.submittedPlayerIds.add(socket.id);
       io.to(state.lobbyCode).emit('player-submitted', { playerId: socket.id });
+    } else {
+      // If pool is now full, auto-mark all guessers who have submitted at least one card as done
+      const extraCardsNow = state.cards.filter(c => c.authorId !== null).length - nonRankerCount;
+      if (extraCardsNow >= poolSize) {
+        for (const [id] of state.players) {
+          if (id !== state.currentRankerId && state.playerCardCounts.get(id) && !state.submittedPlayerIds.has(id)) {
+            state.submittedPlayerIds.add(id);
+          }
+        }
+      }
     }
 
     io.to(state.lobbyCode).emit('lobby-updated', toLobbyState(state));
