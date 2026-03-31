@@ -7,7 +7,6 @@ export type GamePhase =
   | 'game_over';
 
 export interface GameSettings {
-  promptsEnabled: boolean;
   roundCount: number;
   multipleSubmissionsEnabled: boolean;
 }

@@ -14,7 +14,6 @@ export function Home() {
   const [mode, setMode] = useState<'menu' | 'create' | 'join'>('menu');
 
   const defaultSettings: GameSettings = {
-    promptsEnabled: false,
     roundCount: 1,
     multipleSubmissionsEnabled: false,
   };

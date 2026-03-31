@@ -55,7 +55,6 @@ export function Lobby() {
 
   const [localSettings, setLocalSettings] = useState<GameSettings>(
     lobbyState?.settings || {
-      promptsEnabled: false,
       roundCount: 1,
       multipleSubmissionsEnabled: false,
     }
