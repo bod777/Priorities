@@ -35,7 +35,7 @@ function SortableCard({ card, rank }: SortableCardProps) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="touch-none select-none">
       <div className="bg-white border-2 border-purple-300 rounded-lg p-4 shadow-md cursor-move hover:border-purple-500 transition mb-3">
         <div className="flex items-start">
           <div className="bg-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3 flex-shrink-0">
