@@ -89,9 +89,9 @@ export function Home() {
               type="text"
               placeholder="Your display name"
               value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 capitalize"
-              autoCapitalize="words"
+              onChange={(e) => setDisplayName(e.target.value.toUpperCase())}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 uppercase"
+              autoCapitalize="characters"
               maxLength={20}
             />
             <button
@@ -117,8 +117,8 @@ export function Home() {
               placeholder="Your display name"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 capitalize"
-              autoCapitalize="words"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 uppercase"
+              autoCapitalize="characters"
               maxLength={20}
             />
             <input
