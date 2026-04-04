@@ -52,6 +52,7 @@ export interface LobbyState {
   collectiveGuessOrder: string[];
   cardPool: number;
   playerCardCounts: Record<string, number>;
+  scores: Record<string, number>;
 }
 
 export interface Superlatives {

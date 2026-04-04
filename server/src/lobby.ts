@@ -182,5 +182,6 @@ export function toLobbyState(state: ServerGameState): LobbyState {
     collectiveGuessOrder: state.collectiveGuess ?? [],
     cardPool: Math.max(0, (5 - (state.players.size - 1)) - Math.max(0, state.cards.filter(c => c.authorId !== null).length - (state.players.size - 1))),
     playerCardCounts: Object.fromEntries(state.playerCardCounts),
+    scores: Object.fromEntries(state.scores),
   };
 }

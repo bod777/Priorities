@@ -5,6 +5,7 @@ import type { ClientEvents, ServerEvents } from '../../../shared/src/types.ts';
 type TypedSocket = Socket<ServerEvents, ClientEvents>;
 
 let globalSocket: TypedSocket | null = null;
+let reconnectEmitted = false;
 
 function getSocket(): TypedSocket {
   if (!globalSocket) {
@@ -24,19 +25,9 @@ export function useSocket() {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    const attemptReconnect = () => {
-      const token = localStorage.getItem('priorities_reconnect_token');
-      const lobbyCode = localStorage.getItem('priorities_reconnect_lobby');
-      if (token && lobbyCode) {
-        console.log('Attempting reconnect with token');
-        socket.emit('reconnect-player', { token, lobbyCode });
-      }
-    };
-
     socket.on('connect', () => {
       console.log('Socket connected');
       setConnected(true);
-      attemptReconnect();
     });
     socket.on('disconnect', () => {
       console.log('Socket disconnected');
@@ -45,7 +36,6 @@ export function useSocket() {
 
     if (socket.connected) {
       setConnected(true);
-      attemptReconnect();
     }
 
     return () => {
@@ -58,11 +48,25 @@ export function useSocket() {
 }
 
 export function saveReconnectInfo(token: string, lobbyCode: string): void {
-  localStorage.setItem('priorities_reconnect_token', token);
-  localStorage.setItem('priorities_reconnect_lobby', lobbyCode);
+  localStorage.setItem(`priorities_token_${lobbyCode}`, token);
 }
 
-export function clearReconnectInfo(): void {
-  localStorage.removeItem('priorities_reconnect_token');
-  localStorage.removeItem('priorities_reconnect_lobby');
+export function clearReconnectInfo(lobbyCode: string): void {
+  localStorage.removeItem(`priorities_token_${lobbyCode}`);
+}
+
+export function getReconnectToken(lobbyCode: string): string | null {
+  return localStorage.getItem(`priorities_token_${lobbyCode}`);
+}
+
+export function emitReconnectOnce(lobbyCode: string): boolean {
+  if (reconnectEmitted) return false;
+  const token = getReconnectToken(lobbyCode);
+  if (!token || !globalSocket) return false;
+  reconnectEmitted = true;
+  globalSocket.emit('reconnect-player', { token, lobbyCode });
+  // Reset after reconnect resolves so future navigations can reconnect
+  globalSocket.once('reconnect-success', () => { reconnectEmitted = false; });
+  globalSocket.once('reconnect-failed', () => { reconnectEmitted = false; });
+  return true;
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSocket } from '../hooks/useSocket.ts';
 import { useGame } from '../context/GameContext.tsx';
+import { GameHeader } from '../components/GameHeader.tsx';
 
 export function CardSubmission() {
   const { socket } = useSocket();
@@ -34,26 +35,12 @@ export function CardSubmission() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-500 to-pink-500 p-4">
       <div className="max-w-2xl mx-auto space-y-6">
-        {/* Round Header */}
-        <div className="bg-white rounded-2xl shadow-2xl p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-purple-600">Card Submission</h1>
-              <p className="text-gray-600 mt-1">
-                Turn {lobbyState.currentTurn} of {lobbyState.totalTurns}
-                <span className="text-gray-400 ml-2">
-                  · Round {Math.ceil(lobbyState.currentTurn / lobbyState.rankerOrder.length)} of {Math.ceil(lobbyState.totalTurns / lobbyState.rankerOrder.length)}
-                </span>
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-500 mb-1">Current Ranker</p>
-              <div className="bg-yellow-100 border-2 border-yellow-400 rounded-lg px-4 py-2">
-                <p className="font-bold text-purple-600">{ranker?.displayName}</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <GameHeader
+          title="Card Submission"
+          currentTurn={lobbyState.currentTurn}
+          totalTurns={lobbyState.totalTurns}
+          rankerOrder={lobbyState.rankerOrder}
+        />
 
         {/* Main Content */}
         <div className="bg-white rounded-2xl shadow-2xl p-8">

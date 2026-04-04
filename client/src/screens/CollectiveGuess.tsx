@@ -1,6 +1,7 @@
 import { useSocket } from '../hooks/useSocket.ts';
 import { useGame } from '../context/GameContext.tsx';
 import { RankingBoard } from '../components/RankingBoard.tsx';
+import { GameHeader } from '../components/GameHeader.tsx';
 
 export function CollectiveGuess() {
   const { socket } = useSocket();
@@ -36,16 +37,13 @@ export function CollectiveGuess() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-500 to-pink-500 p-4">
       <div className="max-w-2xl mx-auto space-y-6">
+        <GameHeader
+          title="Collective Guess"
+          currentTurn={lobbyState.currentTurn}
+          totalTurns={lobbyState.totalTurns}
+          rankerOrder={lobbyState.rankerOrder}
+        />
         <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-purple-600">Collective Guess</h1>
-            <p className="text-gray-600 mt-2">
-              Turn {lobbyState.currentTurn} of {lobbyState.totalTurns}
-              <span className="text-gray-400 ml-2">
-                · Round {Math.ceil(lobbyState.currentTurn / lobbyState.rankerOrder.length)} of {Math.ceil(lobbyState.totalTurns / lobbyState.rankerOrder.length)}
-              </span>
-            </p>
-          </div>
 
           {!isRanker ? (
             <div className="space-y-4">

@@ -23,6 +23,10 @@ const io = new Server<ClientEvents, ServerEvents>(httpServer, {
 
 app.use(cors());
 
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok' });
+});
+
 if (process.env.NODE_ENV === 'production') {
   const clientDist = path.join(__dirname, '../../../../client/dist');
   app.use(express.static(clientDist));
@@ -30,10 +34,6 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.join(clientDist, 'index.html'));
   });
 }
-
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok' });
-});
 
 io.on('connection', (socket) => {
   console.log(`Player connected: ${socket.id}`);

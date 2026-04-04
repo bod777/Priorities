@@ -4,7 +4,10 @@
       "Bash(npm run build:*)",
       "Bash(npm run typecheck:*)",
       "Bash(netstat:*)",
-      "Bash(grep -l \"currentRound\\\\|totalRounds\\\\|roundCount\\\\|roundNumber\\\\|roundHistory\\\\|startRound\\\\|next-round\\\\|RoundResult\\\\|roundResult\" /c/Users/brido/Sandbox/Personal/Priorities/client/src/screens/*.tsx)"
+      "Bash(grep -l \"currentRound\\\\|totalRounds\\\\|roundCount\\\\|roundNumber\\\\|roundHistory\\\\|startRound\\\\|next-round\\\\|RoundResult\\\\|roundResult\" /c/Users/brido/Sandbox/Personal/Priorities/client/src/screens/*.tsx)",
+      "Bash(ssh -T git@github-personal)",
+      "Bash(ssh -T git@github-work)",
+      "Bash(npm install:*)"
     ]
   }
 }

@@ -3,6 +3,11 @@ import type { ReactNode } from 'react';
 import type { LobbyState, TurnResult, GameOverData } from '../../../shared/src/types.ts';
 import { useSocket, saveReconnectInfo, clearReconnectInfo } from '../hooks/useSocket.ts';
 
+interface Toast {
+  id: string;
+  message: string;
+}
+
 interface GameContextState {
   playerId: string | null;
   displayName: string | null;
@@ -10,6 +15,7 @@ interface GameContextState {
   turnResult: TurnResult | null;
   gameOverData: GameOverData | null;
   showTurnTransition: boolean;
+  toasts: Toast[];
 }
 
 type GameAction =
@@ -20,6 +26,8 @@ type GameAction =
   | { type: 'RESET_TO_LOBBY'; lobbyState: LobbyState }
   | { type: 'SHOW_TURN_TRANSITION' }
   | { type: 'HIDE_TURN_TRANSITION' }
+  | { type: 'ADD_TOAST'; id: string; message: string }
+  | { type: 'REMOVE_TOAST'; id: string }
   | { type: 'RESET' };
 
 const initialState: GameContextState = {
@@ -29,6 +37,7 @@ const initialState: GameContextState = {
   turnResult: null,
   gameOverData: null,
   showTurnTransition: false,
+  toasts: [],
 };
 
 function gameReducer(state: GameContextState, action: GameAction): GameContextState {
@@ -47,6 +56,10 @@ function gameReducer(state: GameContextState, action: GameAction): GameContextSt
       return { ...state, showTurnTransition: true };
     case 'HIDE_TURN_TRANSITION':
       return { ...state, showTurnTransition: false };
+    case 'ADD_TOAST':
+      return { ...state, toasts: [...state.toasts, { id: action.id, message: action.message }] };
+    case 'REMOVE_TOAST':
+      return { ...state, toasts: state.toasts.filter((t) => t.id !== action.id) };
     case 'RESET':
       return initialState;
     default:
@@ -59,20 +72,27 @@ const GameContext = createContext<{
   dispatch: React.Dispatch<GameAction>;
 } | null>(null);
 
-export function GameProvider({ children }: { children: ReactNode }) {
+interface GameProviderProps {
+  children: ReactNode;
+  navigate: (path: string) => void;
+}
+
+export function GameProvider({ children, navigate }: GameProviderProps) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
   const { socket } = useSocket();
   const stateRef = useRef(state);
+  const navigateRef = useRef(navigate);
 
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
 
   useEffect(() => {
-    if (!socket) {
-      console.log('GameContext: socket is null, skipping event registration');
-      return;
-    }
+    navigateRef.current = navigate;
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!socket) return;
 
     console.log('GameContext: Registering socket event listeners', socket);
 
@@ -82,8 +102,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       dispatch({
         type: 'SET_PLAYER',
         playerId: data.playerId,
-        displayName: stateRef.current.displayName || ''
+        displayName: stateRef.current.displayName || '',
       });
+      navigateRef.current(`/${data.lobbyCode}`);
     };
 
     const handleLobbyJoined = (data: { playerId: string; lobbyCode: string; reconnectToken: string }) => {
@@ -92,24 +113,35 @@ export function GameProvider({ children }: { children: ReactNode }) {
       dispatch({
         type: 'SET_PLAYER',
         playerId: data.playerId,
-        displayName: stateRef.current.displayName || ''
+        displayName: stateRef.current.displayName || '',
       });
+      navigateRef.current(`/${data.lobbyCode}`);
     };
 
     const handleReconnectSuccess = (data: LobbyState & { playerId: string; reconnectToken: string }) => {
       console.log('Reconnect success:', data);
       saveReconnectInfo(data.reconnectToken, data.lobbyCode);
-      dispatch({ type: 'SET_PLAYER', playerId: data.playerId, displayName: stateRef.current.displayName || '' });
+      const player = data.players.find((p) => p.id === data.playerId);
+      dispatch({ type: 'SET_PLAYER', playerId: data.playerId, displayName: player?.displayName || '' });
       dispatch({ type: 'SET_LOBBY', lobbyState: data });
     };
 
     const handleReconnectFailed = (data: { message: string }) => {
       console.warn('Reconnect failed:', data.message);
-      clearReconnectInfo();
     };
 
     const handleLobbyUpdated = (data: LobbyState) => {
       console.log('Lobby updated:', data);
+      const prev = stateRef.current.lobbyState;
+      if (prev) {
+        for (const player of data.players) {
+          const prevPlayer = prev.players.find((p) => p.id === player.id);
+          if (prevPlayer?.connected && !player.connected) {
+            const id = `${player.id}-${Date.now()}`;
+            dispatch({ type: 'ADD_TOAST', id, message: `${player.displayName} disconnected` });
+          }
+        }
+      }
       if (data.phase === 'lobby' && stateRef.current.gameOverData) {
         dispatch({ type: 'RESET_TO_LOBBY', lobbyState: data });
       } else {
@@ -122,7 +154,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       if (data.phase === 'card_submission') {
         dispatch({ type: 'SHOW_TURN_TRANSITION' });
-
         setTimeout(() => {
           dispatch({ type: 'HIDE_TURN_TRANSITION' });
         }, 3000);
@@ -164,7 +195,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     const handleError = (data: { message: string }) => {
       console.error('Socket error:', data.message);
-      alert(`Error: ${data.message}`);
     };
 
     socket.on('lobby-created', handleLobbyCreated);
