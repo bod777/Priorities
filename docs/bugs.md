@@ -2,7 +2,7 @@
 
 - [X] Let's add a hidden side bar on the right hand side of the screen that will show you is in the lobby. It would be nice to see quickly what your display name is in that top right corner. After clicking on it, the sidebar should appear and show all the players, who you are, who is the host and whether a player disconnects. Additionally, it should have the users scores and the current game settings. Another ask separate to the sidebar is that there should be an alert pop up if a player disconnects in general. Don't implement anything, write a docs/lobby_list_plan.md to describe how you would implement and include a detailed todo list.
 
-- [ ] Implement guess authorship, a feature where after the cards are submitted by the guessers, the ranker must guess who submitted what card. It should be optional in the game settings. Every one the ranker guess correctly gets them a point at the end of the round. The guessing includes the auto generated cards.
+- [X] Implement guess authorship, a feature where after the cards are submitted by the guessers, the ranker must guess who submitted what card. It should be optional in the game settings. Every one the ranker guess correctly gets them a point at the end of the round. The guessing includes the auto generated cards.
 
 - [ ] Implement individual guessing
 

@@ -18,6 +18,7 @@ export interface ServerGameState {
   authorshipGuesses: Record<string, string> | null;
   scores: Map<string, number>;
   rankerStats: Map<string, number[]>;
+  authorshipScores: Map<string, number>;
   turnHistory: import('../../shared/src/types.js').TurnResult[];
   submittedPlayerIds: Set<string>;
   playerCardCounts: Map<string, number>;
@@ -64,6 +65,7 @@ export function createLobby(hostSocketId: string, displayName: string, settings:
     authorshipGuesses: null,
     scores: new Map([[hostSocketId, 0]]),
     rankerStats: new Map(),
+    authorshipScores: new Map(),
     turnHistory: [],
     submittedPlayerIds: new Set(),
     playerCardCounts: new Map(),

@@ -65,7 +65,7 @@ export interface LobbyState {
 export interface Superlatives {
   mostPredictable: { playerId: string; avgScore: number } | null;
   leastPredictable: { playerId: string; avgScore: number } | null;
-  bestGuesser: { playerId: string; totalScore: number } | null;
+  bestAuthorshipGuesser: { playerId: string; totalScore: number } | null;
 }
 
 export interface GameOverData {

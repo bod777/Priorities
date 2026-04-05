@@ -84,16 +84,16 @@ export function GameOver() {
               </div>
             )}
 
-            {gameOverData.superlatives.bestGuesser && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-green-900 mb-2">
-                  🧠 Best Guesser
+            {gameOverData.superlatives.bestAuthorshipGuesser && (
+              <div className="bg-teal-50 border border-teal-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-teal-900 mb-2">
+                  🕵️ Best Authorship Guesser
                 </h3>
-                <p className="text-green-800">
-                  {lobbyState.players.find((p) => p.id === gameOverData.superlatives.bestGuesser?.playerId)?.displayName}
+                <p className="text-teal-800">
+                  {lobbyState.players.find((p) => p.id === gameOverData.superlatives.bestAuthorshipGuesser?.playerId)?.displayName}
                 </p>
-                <p className="text-sm text-green-600 mt-1">
-                  Total guessing score: {gameOverData.superlatives.bestGuesser?.totalScore} pts
+                <p className="text-sm text-teal-600 mt-1">
+                  Correctly identified {gameOverData.superlatives.bestAuthorshipGuesser?.totalScore} card{gameOverData.superlatives.bestAuthorshipGuesser?.totalScore !== 1 ? 's' : ''} across all turns
                 </p>
               </div>
             )}

@@ -38,6 +38,7 @@ function emitRevealResults(io: Server<ClientEvents, ServerEvents>, state: Server
       }
     }
     state.scores.set(rankerId, (state.scores.get(rankerId) || 0) + authorshipScore);
+    state.authorshipScores.set(rankerId, (state.authorshipScores.get(rankerId) || 0) + authorshipScore);
     turnScores[rankerId] = authorshipScore;
   }
 
@@ -74,17 +75,17 @@ function emitGameOver(io: Server<ClientEvents, ServerEvents>, state: ServerGameS
     }
   }
 
-  let bestGuesser: { playerId: string; totalScore: number } | null = null;
-  for (const [playerId, score] of state.scores) {
-    if (!bestGuesser || score > bestGuesser.totalScore) {
-      bestGuesser = { playerId, totalScore: score };
+  let bestAuthorshipGuesser: { playerId: string; totalScore: number } | null = null;
+  for (const [playerId, score] of state.authorshipScores) {
+    if (score > 0 && (!bestAuthorshipGuesser || score > bestAuthorshipGuesser.totalScore)) {
+      bestAuthorshipGuesser = { playerId, totalScore: score };
     }
   }
 
   io.to(state.lobbyCode).emit('game-over', {
     finalScores,
     turnHistory: state.turnHistory,
-    superlatives: { mostPredictable, leastPredictable, bestGuesser },
+    superlatives: { mostPredictable, leastPredictable, bestAuthorshipGuesser },
   });
 }
 
@@ -289,9 +290,11 @@ export function registerGameHandlers(
     state.cards = [];
     state.rankerRanking = null;
     state.collectiveGuess = null;
+    state.authorshipGuesses = null;
     state.submittedPlayerIds = new Set();
     state.turnHistory = [];
     state.rankerStats = new Map();
+    state.authorshipScores = new Map();
     for (const id of state.scores.keys()) {
       state.scores.set(id, 0);
     }
