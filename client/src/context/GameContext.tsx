@@ -124,6 +124,9 @@ export function GameProvider({ children, navigate }: GameProviderProps) {
       const player = data.players.find((p) => p.id === data.playerId);
       dispatch({ type: 'SET_PLAYER', playerId: data.playerId, displayName: player?.displayName || '' });
       dispatch({ type: 'SET_LOBBY', lobbyState: data });
+      if (data.phase === 'reveal' && data.lastTurnResult) {
+        dispatch({ type: 'SET_TURN_RESULT', turnResult: data.lastTurnResult });
+      }
     };
 
     const handleReconnectFailed = (data: { message: string }) => {

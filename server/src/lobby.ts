@@ -183,5 +183,8 @@ export function toLobbyState(state: ServerGameState): LobbyState {
     cardPool: Math.max(0, (5 - (state.players.size - 1)) - Math.max(0, state.cards.filter(c => c.authorId !== null).length - (state.players.size - 1))),
     playerCardCounts: Object.fromEntries(state.playerCardCounts),
     scores: Object.fromEntries(state.scores),
+    lastTurnResult: state.phase === 'reveal' && state.turnHistory.length > 0
+      ? state.turnHistory[state.turnHistory.length - 1]
+      : null,
   };
 }

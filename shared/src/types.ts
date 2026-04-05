@@ -53,6 +53,7 @@ export interface LobbyState {
   cardPool: number;
   playerCardCounts: Record<string, number>;
   scores: Record<string, number>;
+  lastTurnResult: TurnResult | null;
 }
 
 export interface Superlatives {
