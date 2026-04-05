@@ -15,6 +15,7 @@ export interface ServerGameState {
   cards: CardFull[];
   rankerRanking: string[] | null;
   collectiveGuess: string[] | null;
+  authorshipGuesses: Record<string, string> | null;
   scores: Map<string, number>;
   rankerStats: Map<string, number[]>;
   turnHistory: import('../../shared/src/types.js').TurnResult[];
@@ -60,6 +61,7 @@ export function createLobby(hostSocketId: string, displayName: string, settings:
     cards: [],
     rankerRanking: null,
     collectiveGuess: null,
+    authorshipGuesses: null,
     scores: new Map([[hostSocketId, 0]]),
     rankerStats: new Map(),
     turnHistory: [],
@@ -186,5 +188,6 @@ export function toLobbyState(state: ServerGameState): LobbyState {
     lastTurnResult: state.phase === 'reveal' && state.turnHistory.length > 0
       ? state.turnHistory[state.turnHistory.length - 1]
       : null,
+    authorshipGuesses: state.authorshipGuesses,
   };
 }

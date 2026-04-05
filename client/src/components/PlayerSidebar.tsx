@@ -89,6 +89,12 @@ export function PlayerSidebar({ isOpen, onClose }: PlayerSidebarProps) {
                   {lobbyState.settings.multipleSubmissionsEnabled ? 'On' : 'Off'}
                 </span>
               </li>
+              <li className="flex justify-between">
+                <span>Guess authorship</span>
+                <span className={`font-medium ${lobbyState.settings.authorshipEnabled ? 'text-green-600' : 'text-gray-500'}`}>
+                  {lobbyState.settings.authorshipEnabled ? 'On' : 'Off'}
+                </span>
+              </li>
             </ul>
           </section>
         </div>

@@ -1,6 +1,7 @@
 export type GamePhase =
   | 'lobby'
   | 'card_submission'
+  | 'authorship_guess'
   | 'ranking'
   | 'guessing'
   | 'reveal'
@@ -9,6 +10,7 @@ export type GamePhase =
 export interface GameSettings {
   roundCount: number;
   multipleSubmissionsEnabled: boolean;
+  authorshipEnabled: boolean;
 }
 
 export interface Player {
@@ -35,6 +37,9 @@ export interface TurnResult {
   collectiveGuess: string[] | null;
   scores: Record<string, number>;
   totalScores: Record<string, number>;
+  authorshipGuesses: Record<string, string> | null;
+  authorshipResults: Record<string, string> | null;
+  authorshipScore: number;
 }
 
 export interface LobbyState {
@@ -54,6 +59,7 @@ export interface LobbyState {
   playerCardCounts: Record<string, number>;
   scores: Record<string, number>;
   lastTurnResult: TurnResult | null;
+  authorshipGuesses: Record<string, string> | null;
 }
 
 export interface Superlatives {
@@ -77,6 +83,7 @@ export interface ClientEvents {
   'start-game': () => void;
   'submit-card': (data: { text: string }) => void;
   'done-submitting': () => void;
+  'submit-authorship': (data: { guesses: Record<string, string> }) => void;
   'submit-ranking': (data: { ranking: string[] }) => void;
   'update-collective-guess': (data: { ranking: string[] }) => void;
   'lock-collective-guess': () => void;

@@ -127,6 +127,41 @@ export function Reveal() {
           </div>
 
           {/* Scores */}
+          {revealedCount >= totalCards && turnResult.authorshipResults && (
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold mb-1">Authorship Guesses</h2>
+              <p className="text-sm text-gray-500 mb-3">
+                {ranker?.displayName} scored <span className="font-bold text-purple-600">{turnResult.authorshipScore} / {turnResult.cards.length}</span> correct
+              </p>
+              <div className="space-y-2">
+                {turnResult.cards.map((card) => {
+                  const trueAuthorId = turnResult.authorshipResults![card.id];
+                  const guessedAuthorId = turnResult.authorshipGuesses?.[card.id];
+                  const isCorrect = trueAuthorId === guessedAuthorId;
+                  const trueAuthorName = trueAuthorId === 'auto'
+                    ? 'Auto (generated)'
+                    : lobbyState.players.find((p) => p.id === trueAuthorId)?.displayName ?? 'Unknown';
+                  const guessedName = guessedAuthorId === 'auto'
+                    ? 'Auto (generated)'
+                    : lobbyState.players.find((p) => p.id === guessedAuthorId)?.displayName ?? '—';
+                  return (
+                    <div key={card.id} className={`rounded-lg p-3 border ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                      <p className="text-sm font-medium text-gray-800 mb-1">{card.text}</p>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-gray-500">Guessed:</span>
+                        <span className="font-medium">{guessedName}</span>
+                        <span className="text-gray-400">·</span>
+                        <span className="text-gray-500">Actually:</span>
+                        <span className="font-medium">{trueAuthorName}</span>
+                        <span className="ml-auto text-base">{isCorrect ? '✓' : '✗'}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {revealedCount >= totalCards && (
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-3">Total Scores</h2>

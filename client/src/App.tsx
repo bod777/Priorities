@@ -10,6 +10,7 @@ import { CollectiveGuess } from './screens/CollectiveGuess.tsx';
 import { Reveal } from './screens/Reveal.tsx';
 import { GameOver } from './screens/GameOver.tsx';
 import { Lobby } from './screens/Lobby.tsx';
+import { AuthorshipGuess } from './screens/AuthorshipGuess.tsx';
 
 export function GameRouter() {
   const { state } = useGame();
@@ -30,6 +31,8 @@ export function GameRouter() {
       return <Lobby />;
     case 'card_submission':
       return <CardSubmission />;
+    case 'authorship_guess':
+      return <AuthorshipGuess />;
     case 'ranking':
       return <Ranking />;
     case 'guessing':

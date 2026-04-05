@@ -57,6 +57,7 @@ export function Lobby() {
     lobbyState?.settings || {
       roundCount: 1,
       multipleSubmissionsEnabled: false,
+      authorshipEnabled: false,
     }
   );
 
@@ -201,6 +202,24 @@ export function Lobby() {
               ) : (
                 <span className={`text-sm font-medium ${lobbyState.settings.multipleSubmissionsEnabled ? 'text-purple-600' : 'text-gray-400'}`}>
                   {lobbyState.settings.multipleSubmissionsEnabled ? 'On' : 'Off'}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Guess authorship</p>
+                <p className="text-xs text-gray-400">Ranker guesses who submitted each card — correct guesses score points</p>
+              </div>
+              {isHost ? (
+                <button
+                  onClick={() => handleUpdateSettings({ authorshipEnabled: !localSettings.authorshipEnabled })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${localSettings.authorshipEnabled ? 'bg-purple-600' : 'bg-gray-300'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${localSettings.authorshipEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              ) : (
+                <span className={`text-sm font-medium ${lobbyState.settings.authorshipEnabled ? 'text-purple-600' : 'text-gray-400'}`}>
+                  {lobbyState.settings.authorshipEnabled ? 'On' : 'Off'}
                 </span>
               )}
             </div>

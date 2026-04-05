@@ -16,6 +16,7 @@ export function startTurn(state: ServerGameState): void {
   state.cards = [];
   state.rankerRanking = null;
   state.collectiveGuess = null;
+  state.authorshipGuesses = null;
   state.submittedPlayerIds = new Set();
   state.playerCardCounts = new Map();
 
@@ -33,9 +34,13 @@ export function advancePhase(state: ServerGameState): void {
         state.cards.push(...autoCards);
       }
       state.cards.sort(() => Math.random() - 0.5);
-      state.phase = 'ranking';
+      state.phase = state.settings.authorshipEnabled ? 'authorship_guess' : 'ranking';
       break;
     }
+
+    case 'authorship_guess':
+      state.phase = 'ranking';
+      break;
 
     case 'ranking':
       state.collectiveGuess = state.cards.map((c) => c.id);

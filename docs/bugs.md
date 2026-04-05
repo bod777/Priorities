@@ -2,15 +2,15 @@
 
 - [X] Let's add a hidden side bar on the right hand side of the screen that will show you is in the lobby. It would be nice to see quickly what your display name is in that top right corner. After clicking on it, the sidebar should appear and show all the players, who you are, who is the host and whether a player disconnects. Additionally, it should have the users scores and the current game settings. Another ask separate to the sidebar is that there should be an alert pop up if a player disconnects in general. Don't implement anything, write a docs/lobby_list_plan.md to describe how you would implement and include a detailed todo list.
 
+- [ ] Implement guess authorship, a feature where after the cards are submitted by the guessers, the ranker must guess who submitted what card. It should be optional in the game settings. Every one the ranker guess correctly gets them a point at the end of the round. The guessing includes the auto generated cards.
+
 - [ ] Implement individual guessing
 
-- [ ] Implement guess authorship (so after the cards are submitted by the guessers, the ranker must guess who submitted what)
+- [ ] Ranker can pick the funniest card from a round and the guesser who submitted that card gets a point. Alternative its a vote among all the users and the top card gets the point.
 
 - [ ] As a separate feature, I think it would also be cool to implement a way for the guesser to see suggested cards from the system and use them if they want or refresh to see more suggestions. How would you implement? This is just a discussion, don't implement or create anything yet.
 
 - [ ] In the settings, there should be a timer for how long card submission takes and ranker rankings and the guesser's deliberation. Defaulting to 90 seconds for the submission, 60 seconds for the ranking, 5 minutes for the ranking.
-
-- [ ] Ranker can pick the funniest card from a round and the guesser who submitted that card gets a point. Alternative its a vote among all the users and the top card gets the point.
 
 - [ ] Could you please update the /docs/collective_ranking.md to account for the changes you have made in this session?
 

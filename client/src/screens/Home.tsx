@@ -13,6 +13,7 @@ export function Home() {
   const defaultSettings: GameSettings = {
     roundCount: 1,
     multipleSubmissionsEnabled: false,
+    authorshipEnabled: false,
   };
 
   const handleCreateLobby = () => {

@@ -7,30 +7,51 @@ import { calculateScore } from '../scoring.js';
 
 function emitRevealResults(io: Server<ClientEvents, ServerEvents>, state: ServerGameState): void {
   const trueRanking = state.rankerRanking!;
+  const rankerId = state.currentRankerId!;
   const turnScores: Record<string, number> = {};
 
+  // Score collective guess (guessers)
   if (state.collectiveGuess) {
     const score = calculateScore(trueRanking, state.collectiveGuess);
     for (const [playerId] of state.players) {
-      if (playerId !== state.currentRankerId) {
+      if (playerId !== rankerId) {
         turnScores[playerId] = score;
         state.scores.set(playerId, (state.scores.get(playerId) || 0) + score);
       }
     }
-    if (!state.rankerStats.has(state.currentRankerId!)) {
-      state.rankerStats.set(state.currentRankerId!, []);
+    if (!state.rankerStats.has(rankerId)) {
+      state.rankerStats.set(rankerId, []);
     }
-    state.rankerStats.get(state.currentRankerId!)!.push(score);
+    state.rankerStats.get(rankerId)!.push(score);
+  }
+
+  // Score authorship guesses (ranker)
+  let authorshipScore = 0;
+  const authorshipResults: Record<string, string> | null = state.settings.authorshipEnabled
+    ? Object.fromEntries(state.cards.map((c) => [c.id, c.authorId ?? 'auto']))
+    : null;
+
+  if (state.settings.authorshipEnabled && state.authorshipGuesses && authorshipResults) {
+    for (const [cardId, trueAuthor] of Object.entries(authorshipResults)) {
+      if (state.authorshipGuesses[cardId] === trueAuthor) {
+        authorshipScore++;
+      }
+    }
+    state.scores.set(rankerId, (state.scores.get(rankerId) || 0) + authorshipScore);
+    turnScores[rankerId] = authorshipScore;
   }
 
   const result: TurnResult = {
     turnNumber: state.currentTurn,
-    rankerId: state.currentRankerId!,
+    rankerId,
     cards: state.cards.map((c) => ({ id: c.id, text: c.text })),
     trueRanking,
     collectiveGuess: state.collectiveGuess,
     scores: turnScores,
     totalScores: Object.fromEntries(state.scores),
+    authorshipGuesses: state.authorshipGuesses,
+    authorshipResults,
+    authorshipScore,
   };
 
   state.turnHistory.push(result);
@@ -93,6 +114,20 @@ function handleAutoSubmit(io: Server<ClientEvents, ServerEvents>, state: ServerG
       io.to(state.lobbyCode).emit('lobby-updated', toLobbyState(state));
       checkPhaseAdvance(io, state);
     }
+    return;
+  }
+
+  if (state.phase === 'authorship_guess' && playerId === state.currentRankerId) {
+    // Auto-submit random guesses so game can continue
+    const playerIds = Array.from(state.players.keys()).filter((id) => id !== state.currentRankerId);
+    const guesses: Record<string, string> = {};
+    for (const card of state.cards) {
+      const options = [...playerIds, 'auto'];
+      guesses[card.id] = options[Math.floor(Math.random() * options.length)];
+    }
+    state.authorshipGuesses = guesses;
+    advancePhase(state);
+    io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
     return;
   }
 
@@ -182,6 +217,17 @@ export function registerGameHandlers(
     state.submittedPlayerIds.add(socket.id);
     io.to(state.lobbyCode).emit('lobby-updated', toLobbyState(state));
     checkPhaseAdvance(io, state);
+  });
+
+  socket.on('submit-authorship', ({ guesses }) => {
+    const state = getLobbyForSocket(socket.id);
+    if (!state || state.phase !== 'authorship_guess') return;
+    if (socket.id !== state.currentRankerId) return;
+    if (Object.keys(guesses).length !== state.cards.length) return;
+
+    state.authorshipGuesses = guesses;
+    advancePhase(state);
+    io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
   });
 
   socket.on('submit-ranking', ({ ranking }) => {
