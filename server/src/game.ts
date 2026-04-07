@@ -39,6 +39,10 @@ export function advancePhase(state: ServerGameState): void {
     }
 
     case 'authorship_guess':
+      state.phase = 'authorship_reveal';
+      break;
+
+    case 'authorship_reveal':
       state.phase = 'ranking';
       break;
 

@@ -92,16 +92,24 @@ export function CollectiveGuess() {
               )}
             </div>
           ) : (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <p className="text-blue-800 text-center font-medium">
-                Waiting for other players to collectively guess your ranking...
+            <div className="space-y-4">
+              <p className="text-gray-700 font-medium">
+                Watch as the others guess your ranking live!
               </p>
-              <p className="text-blue-600 text-center mt-2">
-                {lockedCount} / {nonRankerCount} locked
-                {disconnectedCount > 0 && (
-                  <span className="text-gray-400 ml-1">· {disconnectedCount} disconnected</span>
-                )}
-              </p>
+              <RankingBoard
+                cards={lobbyState.cards}
+                ranking={lobbyState.collectiveGuessOrder}
+                onRankingChange={() => {}}
+                disabled={true}
+              />
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-blue-600 text-center text-sm">
+                  {lockedCount} / {nonRankerCount} locked in
+                  {disconnectedCount > 0 && (
+                    <span className="text-gray-400 ml-1">· {disconnectedCount} disconnected</span>
+                  )}
+                </p>
+              </div>
             </div>
           )}
         </div>

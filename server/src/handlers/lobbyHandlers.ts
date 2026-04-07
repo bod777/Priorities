@@ -1,6 +1,7 @@
 import type { Server, Socket } from 'socket.io';
 import type { ClientEvents, ServerEvents } from '../../../shared/src/types.js';
 import { createLobby, joinLobby, reconnectPlayer, getLobbyForSocket, toLobbyState } from '../lobby.js';
+import { buildGameOverData } from './gameHandlers.js';
 
 export function registerLobbyHandlers(
   io: Server<ClientEvents, ServerEvents>,
@@ -38,7 +39,8 @@ export function registerLobbyHandlers(
     const { state, playerId } = result;
     const newToken = Array.from(state.reconnectTokens.entries()).find(([, id]) => id === playerId)?.[0];
     socket.join(state.lobbyCode);
-    socket.emit('reconnect-success', { ...toLobbyState(state), playerId, reconnectToken: newToken! });
+    const gameOverData = state.phase === 'game_over' ? buildGameOverData(state) : undefined;
+    socket.emit('reconnect-success', { ...toLobbyState(state), playerId, reconnectToken: newToken!, gameOverData });
     io.to(state.lobbyCode).emit('lobby-updated', toLobbyState(state));
     console.log(`Player ${playerId} reconnected to lobby ${lobbyCode}`);
   });

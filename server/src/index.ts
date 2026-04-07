@@ -17,8 +17,10 @@ const io = new Server<ClientEvents, ServerEvents>(httpServer, {
   cors: {
     origin: process.env.NODE_ENV === 'production' ? false : 'http://localhost:5173',
   },
-  pingInterval: 25000,
-  pingTimeout: 20000,
+  // Mobile browsers can be backgrounded for 30-60s before their radio wakes back up.
+  // Ping every 30s, allow 60s for a pong before declaring disconnect.
+  pingInterval: 30000,
+  pingTimeout: 60000,
 });
 
 app.use(cors());

@@ -11,6 +11,7 @@ import { Reveal } from './screens/Reveal.tsx';
 import { GameOver } from './screens/GameOver.tsx';
 import { Lobby } from './screens/Lobby.tsx';
 import { AuthorshipGuess } from './screens/AuthorshipGuess.tsx';
+import { AuthorshipReveal } from './screens/AuthorshipReveal.tsx';
 
 export function GameRouter() {
   const { state } = useGame();
@@ -33,6 +34,8 @@ export function GameRouter() {
       return <CardSubmission />;
     case 'authorship_guess':
       return <AuthorshipGuess />;
+    case 'authorship_reveal':
+      return <AuthorshipReveal />;
     case 'ranking':
       return <Ranking />;
     case 'guessing':

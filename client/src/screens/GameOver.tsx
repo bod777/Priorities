@@ -10,8 +10,18 @@ export function GameOver() {
 
   const isHost = lobbyState.hostId === playerId;
 
+  // Build a name map from all turns' playerNames (covers reconnected players whose socket ID changed)
+  const playerNames: Record<string, string> = {};
+  for (const turn of gameOverData.turnHistory) {
+    Object.assign(playerNames, turn.playerNames);
+  }
+  // Fall back to current lobbyState players for anyone not in history
+  for (const p of lobbyState.players) {
+    if (!playerNames[p.id]) playerNames[p.id] = p.displayName;
+  }
+
   const sortedFinalScores = Object.entries(gameOverData.finalScores)
-    .map(([playerId, totalScore]) => ({ playerId, totalScore }))
+    .map(([id, totalScore]) => ({ id, totalScore, name: playerNames[id] ?? id }))
     .sort((a, b) => b.totalScore - a.totalScore);
 
   return (
@@ -23,11 +33,9 @@ export function GameOver() {
           <div className="mb-8">
             <h2 className="text-2xl font-semibold mb-4 text-center">Final Scores</h2>
             <div className="space-y-3">
-              {sortedFinalScores.map((entry, index) => {
-                const player = lobbyState.players.find((p) => p.id === entry.playerId);
-                return (
+              {sortedFinalScores.map((entry, index) => (
                   <div
-                    key={entry.playerId}
+                    key={entry.id}
                     className={`flex items-center justify-between p-6 rounded-lg ${
                       index === 0
                         ? 'bg-gradient-to-r from-yellow-400 to-yellow-200 border-4 border-yellow-500'
@@ -42,14 +50,13 @@ export function GameOver() {
                       <span className="text-3xl font-bold">
                         {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
                       </span>
-                      <span className="text-xl font-medium">{player?.displayName}</span>
+                      <span className="text-xl font-medium">{entry.name}</span>
                     </div>
                     <span className="text-2xl font-bold text-purple-600">
                       {entry.totalScore} pts
                     </span>
                   </div>
-                );
-              })}
+              ))}
             </div>
           </div>
 
@@ -62,7 +69,7 @@ export function GameOver() {
                   🎯 Most Predictable Ranker
                 </h3>
                 <p className="text-purple-800">
-                  {lobbyState.players.find((p) => p.id === gameOverData.superlatives.mostPredictable?.playerId)?.displayName}
+                  {playerNames[gameOverData.superlatives.mostPredictable.playerId]}
                 </p>
                 <p className="text-sm text-purple-600 mt-1">
                   Average score from guessers: {gameOverData.superlatives.mostPredictable?.avgScore.toFixed(1)} pts
@@ -76,7 +83,7 @@ export function GameOver() {
                   🎲 Least Predictable Ranker
                 </h3>
                 <p className="text-pink-800">
-                  {lobbyState.players.find((p) => p.id === gameOverData.superlatives.leastPredictable?.playerId)?.displayName}
+                  {playerNames[gameOverData.superlatives.leastPredictable.playerId]}
                 </p>
                 <p className="text-sm text-pink-600 mt-1">
                   Average score from guessers: {gameOverData.superlatives.leastPredictable?.avgScore.toFixed(1)} pts
@@ -90,10 +97,10 @@ export function GameOver() {
                   🕵️ Best Authorship Guesser
                 </h3>
                 <p className="text-teal-800">
-                  {lobbyState.players.find((p) => p.id === gameOverData.superlatives.bestAuthorshipGuesser?.playerId)?.displayName}
+                  {playerNames[gameOverData.superlatives.bestAuthorshipGuesser.playerId]}
                 </p>
                 <p className="text-sm text-teal-600 mt-1">
-                  Correctly identified {gameOverData.superlatives.bestAuthorshipGuesser?.totalScore} card{gameOverData.superlatives.bestAuthorshipGuesser?.totalScore !== 1 ? 's' : ''} across all turns
+                  Identified the authors of {gameOverData.superlatives.bestAuthorshipGuesser.totalScore} card{gameOverData.superlatives.bestAuthorshipGuesser.totalScore !== 1 ? 's' : ''} correctly
                 </p>
               </div>
             )}

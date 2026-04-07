@@ -42,6 +42,11 @@ function emitRevealResults(io: Server<ClientEvents, ServerEvents>, state: Server
     turnScores[rankerId] = authorshipScore;
   }
 
+  const playerNames: Record<string, string> = {};
+  for (const [id, player] of state.players) {
+    playerNames[id] = player.displayName;
+  }
+
   const result: TurnResult = {
     turnNumber: state.currentTurn,
     rankerId,
@@ -50,6 +55,7 @@ function emitRevealResults(io: Server<ClientEvents, ServerEvents>, state: Server
     collectiveGuess: state.collectiveGuess,
     scores: turnScores,
     totalScores: Object.fromEntries(state.scores),
+    playerNames,
     authorshipGuesses: state.authorshipGuesses,
     authorshipResults,
     authorshipScore,
@@ -59,7 +65,7 @@ function emitRevealResults(io: Server<ClientEvents, ServerEvents>, state: Server
   io.to(state.lobbyCode).emit('reveal-results', result);
 }
 
-function emitGameOver(io: Server<ClientEvents, ServerEvents>, state: ServerGameState): void {
+export function buildGameOverData(state: ServerGameState): import('../../../shared/src/types.js').GameOverData {
   const finalScores = Object.fromEntries(state.scores);
 
   let mostPredictable: { playerId: string; avgScore: number } | null = null;
@@ -82,11 +88,15 @@ function emitGameOver(io: Server<ClientEvents, ServerEvents>, state: ServerGameS
     }
   }
 
-  io.to(state.lobbyCode).emit('game-over', {
+  return {
     finalScores,
     turnHistory: state.turnHistory,
     superlatives: { mostPredictable, leastPredictable, bestAuthorshipGuesser },
-  });
+  };
+}
+
+function emitGameOver(io: Server<ClientEvents, ServerEvents>, state: ServerGameState): void {
+  io.to(state.lobbyCode).emit('game-over', buildGameOverData(state));
 }
 
 function checkPhaseAdvance(io: Server<ClientEvents, ServerEvents>, state: ServerGameState): void {
@@ -127,7 +137,8 @@ function handleAutoSubmit(io: Server<ClientEvents, ServerEvents>, state: ServerG
       guesses[card.id] = options[Math.floor(Math.random() * options.length)];
     }
     state.authorshipGuesses = guesses;
-    advancePhase(state);
+    advancePhase(state); // -> authorship_reveal
+    advancePhase(state); // -> ranking (skip the manual reveal step when auto-submitting)
     io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
     return;
   }
@@ -227,7 +238,16 @@ export function registerGameHandlers(
     if (Object.keys(guesses).length !== state.cards.length) return;
 
     state.authorshipGuesses = guesses;
-    advancePhase(state);
+    advancePhase(state); // -> authorship_reveal
+    io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
+  });
+
+  socket.on('continue-to-ranking', () => {
+    const state = getLobbyForSocket(socket.id);
+    if (!state || state.phase !== 'authorship_reveal') return;
+    if (socket.id !== state.hostId) return;
+
+    advancePhase(state); // -> ranking
     io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
   });
 
@@ -362,6 +382,8 @@ export function registerGameHandlers(
           (pl) => pl.id !== socket.id && pl.connected
         );
         if (nextConnected) {
+          const oldHost = currentState.players.get(socket.id);
+          if (oldHost) oldHost.isHost = false;
           nextConnected.isHost = true;
           currentState.hostId = nextConnected.id;
           io.to(currentState.lobbyCode).emit('lobby-updated', toLobbyState(currentState));

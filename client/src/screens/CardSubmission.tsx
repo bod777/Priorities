@@ -73,7 +73,6 @@ export function CardSubmission() {
                     .filter((p) => p.id !== lobbyState.currentRankerId)
                     .map((player) => {
                       const done = lobbyState.submittedPlayerIds.includes(player.id);
-                      const cardCount = lobbyState.playerCardCounts[player.id] || 0;
                       return (
                         <div key={player.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
                           <span className="font-medium">{player.displayName}</span>
@@ -82,10 +81,8 @@ export function CardSubmission() {
                               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                               </svg>
-                              {cardCount} card{cardCount !== 1 ? 's' : ''} · done
+                              Done
                             </span>
-                          ) : cardCount > 0 ? (
-                            <span className="text-blue-500 text-sm">{cardCount} card{cardCount !== 1 ? 's' : ''} · still submitting</span>
                           ) : (
                             <span className="text-gray-400 text-sm">Waiting...</span>
                           )}

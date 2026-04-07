@@ -6,6 +6,7 @@ import { useSocket, saveReconnectInfo, clearReconnectInfo } from '../hooks/useSo
 interface Toast {
   id: string;
   message: string;
+  variant?: 'default' | 'success';
 }
 
 interface GameContextState {
@@ -26,7 +27,7 @@ type GameAction =
   | { type: 'RESET_TO_LOBBY'; lobbyState: LobbyState }
   | { type: 'SHOW_TURN_TRANSITION' }
   | { type: 'HIDE_TURN_TRANSITION' }
-  | { type: 'ADD_TOAST'; id: string; message: string }
+  | { type: 'ADD_TOAST'; id: string; message: string; variant?: 'default' | 'success' }
   | { type: 'REMOVE_TOAST'; id: string }
   | { type: 'RESET' };
 
@@ -57,7 +58,7 @@ function gameReducer(state: GameContextState, action: GameAction): GameContextSt
     case 'HIDE_TURN_TRANSITION':
       return { ...state, showTurnTransition: false };
     case 'ADD_TOAST':
-      return { ...state, toasts: [...state.toasts, { id: action.id, message: action.message }] };
+      return { ...state, toasts: [...state.toasts, { id: action.id, message: action.message, variant: action.variant }] };
     case 'REMOVE_TOAST':
       return { ...state, toasts: state.toasts.filter((t) => t.id !== action.id) };
     case 'RESET':
@@ -118,7 +119,7 @@ export function GameProvider({ children, navigate }: GameProviderProps) {
       navigateRef.current(`/${data.lobbyCode}`);
     };
 
-    const handleReconnectSuccess = (data: LobbyState & { playerId: string; reconnectToken: string }) => {
+    const handleReconnectSuccess = (data: LobbyState & { playerId: string; reconnectToken: string; gameOverData?: import('../../../shared/src/types.ts').GameOverData }) => {
       console.log('Reconnect success:', data);
       saveReconnectInfo(data.reconnectToken, data.lobbyCode);
       const player = data.players.find((p) => p.id === data.playerId);
@@ -126,6 +127,9 @@ export function GameProvider({ children, navigate }: GameProviderProps) {
       dispatch({ type: 'SET_LOBBY', lobbyState: data });
       if (data.phase === 'reveal' && data.lastTurnResult) {
         dispatch({ type: 'SET_TURN_RESULT', turnResult: data.lastTurnResult });
+      }
+      if (data.phase === 'game_over' && data.gameOverData) {
+        dispatch({ type: 'SET_GAME_OVER', gameOverData: data.gameOverData });
       }
     };
 
@@ -142,6 +146,9 @@ export function GameProvider({ children, navigate }: GameProviderProps) {
           if (prevPlayer?.connected && !player.connected) {
             const id = `${player.id}-${Date.now()}`;
             dispatch({ type: 'ADD_TOAST', id, message: `${player.displayName} disconnected` });
+          } else if (prevPlayer && !prevPlayer.connected && player.connected) {
+            const id = `${player.id}-${Date.now()}`;
+            dispatch({ type: 'ADD_TOAST', id, message: `${player.displayName} reconnected`, variant: 'success' });
           }
         }
       }

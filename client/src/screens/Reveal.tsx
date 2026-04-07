@@ -32,10 +32,10 @@ export function Reveal() {
   };
 
   const isHost = lobbyState.hostId === playerId;
-  const ranker = lobbyState.players.find((p) => p.id === turnResult.rankerId);
+  const rankerName = turnResult.playerNames[turnResult.rankerId] ?? lobbyState.players.find((p) => p.id === turnResult.rankerId)?.displayName ?? turnResult.rankerId;
 
   const sortedScores = Object.entries(turnResult.totalScores)
-    .map(([id, score]) => ({ id, score }))
+    .map(([id, score]) => ({ id, score, name: turnResult.playerNames[id] ?? lobbyState.players.find((p) => p.id === id)?.displayName ?? id }))
     .sort((a, b) => b.score - a.score);
 
   // Reveal rank 1 first, ending at rank 5
@@ -67,7 +67,7 @@ export function Reveal() {
           <div className="grid grid-cols-[2rem_1fr_2rem_1fr] gap-x-3 mb-2 px-1">
             <div />
             <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-              {ranker?.displayName}'s Ranking
+              {rankerName}'s Ranking
             </p>
             <div />
             <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
@@ -131,19 +131,17 @@ export function Reveal() {
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-1">Authorship Guesses</h2>
               <p className="text-sm text-gray-500 mb-3">
-                {ranker?.displayName} scored <span className="font-bold text-purple-600">{turnResult.authorshipScore} / {turnResult.cards.length}</span> correct
+                {rankerName} scored <span className="font-bold text-purple-600">{turnResult.authorshipScore} / {turnResult.cards.length}</span> correct
               </p>
               <div className="space-y-2">
                 {turnResult.cards.map((card) => {
                   const trueAuthorId = turnResult.authorshipResults![card.id];
                   const guessedAuthorId = turnResult.authorshipGuesses?.[card.id];
                   const isCorrect = trueAuthorId === guessedAuthorId;
-                  const trueAuthorName = trueAuthorId === 'auto'
-                    ? 'Auto (generated)'
-                    : lobbyState.players.find((p) => p.id === trueAuthorId)?.displayName ?? 'Unknown';
-                  const guessedName = guessedAuthorId === 'auto'
-                    ? 'Auto (generated)'
-                    : lobbyState.players.find((p) => p.id === guessedAuthorId)?.displayName ?? '—';
+                  const getName = (id: string) =>
+                    id === 'auto' ? 'Auto (generated)' : (turnResult.playerNames[id] ?? id);
+                  const trueAuthorName = getName(trueAuthorId);
+                  const guessedName = guessedAuthorId ? getName(guessedAuthorId) : '—';
                   return (
                     <div key={card.id} className={`rounded-lg p-3 border ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
                       <p className="text-sm font-medium text-gray-800 mb-1">{card.text}</p>
@@ -166,23 +164,20 @@ export function Reveal() {
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-3">Total Scores</h2>
               <div className="space-y-2">
-                {sortedScores.map((entry, index) => {
-                  const player = lobbyState.players.find((p) => p.id === entry.id);
-                  return (
-                    <div
-                      key={entry.id}
-                      className={`flex items-center justify-between p-3 rounded-lg ${
-                        index === 0 ? 'bg-yellow-100 border-2 border-yellow-400' : 'bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl font-bold text-gray-400">#{index + 1}</span>
-                        <span className="font-medium">{player?.displayName}</span>
-                      </div>
-                      <span className="text-lg font-bold text-purple-600">{entry.score} pts</span>
+                {sortedScores.map((entry, index) => (
+                  <div
+                    key={entry.id}
+                    className={`flex items-center justify-between p-3 rounded-lg ${
+                      index === 0 ? 'bg-yellow-100 border-2 border-yellow-400' : 'bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl font-bold text-gray-400">#{index + 1}</span>
+                      <span className="font-medium">{entry.name}</span>
                     </div>
-                  );
-                })}
+                    <span className="text-lg font-bold text-purple-600">{entry.score} pts</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}

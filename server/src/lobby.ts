@@ -191,5 +191,8 @@ export function toLobbyState(state: ServerGameState): LobbyState {
       ? state.turnHistory[state.turnHistory.length - 1]
       : null,
     authorshipGuesses: state.authorshipGuesses,
+    authorshipResults: state.phase === 'authorship_reveal'
+      ? Object.fromEntries(state.cards.map((c) => [c.id, c.authorId ?? 'auto']))
+      : null,
   };
 }

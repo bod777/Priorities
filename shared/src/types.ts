@@ -2,6 +2,7 @@ export type GamePhase =
   | 'lobby'
   | 'card_submission'
   | 'authorship_guess'
+  | 'authorship_reveal'
   | 'ranking'
   | 'guessing'
   | 'reveal'
@@ -37,6 +38,7 @@ export interface TurnResult {
   collectiveGuess: string[] | null;
   scores: Record<string, number>;
   totalScores: Record<string, number>;
+  playerNames: Record<string, string>;
   authorshipGuesses: Record<string, string> | null;
   authorshipResults: Record<string, string> | null;
   authorshipScore: number;
@@ -60,6 +62,7 @@ export interface LobbyState {
   scores: Record<string, number>;
   lastTurnResult: TurnResult | null;
   authorshipGuesses: Record<string, string> | null;
+  authorshipResults: Record<string, string> | null;
 }
 
 export interface Superlatives {
@@ -88,6 +91,7 @@ export interface ClientEvents {
   'update-collective-guess': (data: { ranking: string[] }) => void;
   'lock-collective-guess': () => void;
   'unlock-collective-guess': () => void;
+  'continue-to-ranking': () => void;
   'next-turn': () => void;
   'reset-game': () => void;
 }
@@ -95,7 +99,7 @@ export interface ClientEvents {
 export interface ServerEvents {
   'lobby-created': (data: { lobbyCode: string; playerId: string; reconnectToken: string }) => void;
   'lobby-joined': (data: { playerId: string; lobbyCode: string; reconnectToken: string }) => void;
-  'reconnect-success': (data: LobbyState & { playerId: string; reconnectToken: string }) => void;
+  'reconnect-success': (data: LobbyState & { playerId: string; reconnectToken: string; gameOverData?: GameOverData }) => void;
   'reconnect-failed': (data: { message: string }) => void;
   'lobby-updated': (data: LobbyState) => void;
   'phase-changed': (data: LobbyState) => void;

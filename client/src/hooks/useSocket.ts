@@ -12,10 +12,17 @@ function getSocket(): TypedSocket {
     globalSocket = io({
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000,
     });
     console.log('Created new socket instance');
+
+    // Reset the flag whenever the transport drops so the next connect event
+    // triggers a fresh reconnect-player attempt.
+    globalSocket.on('disconnect', () => {
+      reconnectEmitted = false;
+    });
   }
   return globalSocket;
 }
