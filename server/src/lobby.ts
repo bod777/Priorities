@@ -15,6 +15,7 @@ export interface ServerGameState {
   cards: CardFull[];
   rankerRanking: string[] | null;
   collectiveGuess: string[] | null;
+  individualGuesses: Map<string, string[]> | null;
   authorshipGuesses: Record<string, string> | null;
   scores: Map<string, number>;
   rankerStats: Map<string, number[]>;
@@ -22,6 +23,7 @@ export interface ServerGameState {
   turnHistory: import('../../shared/src/types.js').TurnResult[];
   submittedPlayerIds: Set<string>;
   playerCardCounts: Map<string, number>;
+  funniestCardVotes: Map<string, string>; // voterId -> cardId
   pendingTimers: Map<string, ReturnType<typeof setTimeout>>;
   reconnectTokens: Map<string, string>;
 }
@@ -62,6 +64,7 @@ export function createLobby(hostSocketId: string, displayName: string, settings:
     cards: [],
     rankerRanking: null,
     collectiveGuess: null,
+    individualGuesses: null,
     authorshipGuesses: null,
     scores: new Map([[hostSocketId, 0]]),
     rankerStats: new Map(),
@@ -69,6 +72,7 @@ export function createLobby(hostSocketId: string, displayName: string, settings:
     turnHistory: [],
     submittedPlayerIds: new Set(),
     playerCardCounts: new Map(),
+    funniestCardVotes: new Map(),
     pendingTimers: new Map(),
     reconnectTokens: new Map(),
   };
@@ -149,6 +153,14 @@ export function reconnectPlayer(token: string, newSocketId: string): { state: Se
   if (rankerStats !== undefined) {
     state.rankerStats.delete(oldSocketId);
     state.rankerStats.set(newSocketId, rankerStats);
+  }
+
+  if (state.individualGuesses) {
+    const individualGuess = state.individualGuesses.get(oldSocketId);
+    if (individualGuess !== undefined) {
+      state.individualGuesses.delete(oldSocketId);
+      state.individualGuesses.set(newSocketId, individualGuess);
+    }
   }
 
   socketToLobby.delete(oldSocketId);

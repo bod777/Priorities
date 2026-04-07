@@ -13,11 +13,9 @@
 
 - [X] Animation when the items move for the players
 
-- [ ] Implement individual guessing
+- [X] Implement individual guessing
 
-- [ ] Ranker can pick the funniest card from a round and the guesser who submitted that card gets a point. Alternative its a vote among all the users and the top card gets the point.
-
-- [ ] In the settings, there should be a timer for how long card submission takes and ranker rankings and the guesser's deliberation. Defaulting to 90 seconds for the submission, 60 seconds for the ranking, 5 minutes for the ranking.
+- [X] Another optional setting is that the ranker can pick the funniest card from a round and the guesser who submitted that card gets a point. Alternative its a vote among all the users and the top card gets the point.
 
 - [ ] I would like to add a new setting changing how the points work. Currently, you get a point for every card ranked correctly. This setting will award a half point if you rank a card within 1 card of its correct position. For example, we have these cards ["Apples","Baths","World Peace","A Sunday Roast","Kangeroos"]
 
@@ -55,11 +53,12 @@ So the total is 2.5.
 
 I am not sure what the usual name of this scoring system would be, could you research and work out an appropriate name? Don't implement anything yet.
 
-
-- [ ] Add a game setting to let the guessers see the submitted cards of other guessers while they are submitting their own. 
+- [X] Add a game setting to let the guessers see the submitted cards of other guessers while they are submitting their own. 
 
 - [ ] As a separate game setting, I think it would also be cool to implement a way for the guesser to see suggested cards from the system and use them if they want or refresh to see more suggestions. How would you implement? This is just a discussion, don't implement or create anything yet.
 
 - [ ] Based on our session, what documentation should we write up to describe the changes that were made?
 
 - [ ] Saving the results from the game. This is a big addition and needs a discussion on what is involved.
+
+- [ ] In the settings, there should be a timer for how long card submission takes and ranker rankings and the guesser's deliberation. Defaulting to 90 seconds for the submission, 60 seconds for the ranking, 5 minutes for the ranking.

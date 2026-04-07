@@ -7,6 +7,7 @@ import { CardSubmission } from './screens/CardSubmission.tsx';
 import { RoundTransition } from './screens/RoundTransition.tsx';
 import { Ranking } from './screens/Ranking.tsx';
 import { CollectiveGuess } from './screens/CollectiveGuess.tsx';
+import { IndividualGuess } from './screens/IndividualGuess.tsx';
 import { Reveal } from './screens/Reveal.tsx';
 import { GameOver } from './screens/GameOver.tsx';
 import { Lobby } from './screens/Lobby.tsx';
@@ -39,7 +40,7 @@ export function GameRouter() {
     case 'ranking':
       return <Ranking />;
     case 'guessing':
-      return <CollectiveGuess />;
+      return lobbyState.settings.individualGuessEnabled ? <IndividualGuess /> : <CollectiveGuess />;
     case 'reveal':
       return <Reveal />;
     case 'game_over':

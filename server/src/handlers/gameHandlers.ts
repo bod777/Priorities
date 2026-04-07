@@ -10,9 +10,29 @@ function emitRevealResults(io: Server<ClientEvents, ServerEvents>, state: Server
   const rankerId = state.currentRankerId!;
   const turnScores: Record<string, number> = {};
 
-  // Score collective guess (guessers)
-  if (state.collectiveGuess) {
-    const score = calculateScore(trueRanking, state.collectiveGuess);
+  if (state.settings.individualGuessEnabled && state.individualGuesses) {
+    // Score each guesser individually
+    const guesserScores: number[] = [];
+    for (const [playerId] of state.players) {
+      if (playerId !== rankerId) {
+        const guess = state.individualGuesses.get(playerId) ?? [];
+        const score = guess.length > 0 ? calculateScore(trueRanking, guess, state.settings.nearMissScoring) : 0;
+        turnScores[playerId] = score;
+        state.scores.set(playerId, (state.scores.get(playerId) || 0) + score);
+        guesserScores.push(score);
+      }
+    }
+    // Ranker stat: mean of all guesser scores
+    if (guesserScores.length > 0) {
+      const mean = guesserScores.reduce((a, b) => a + b, 0) / guesserScores.length;
+      if (!state.rankerStats.has(rankerId)) {
+        state.rankerStats.set(rankerId, []);
+      }
+      state.rankerStats.get(rankerId)!.push(mean);
+    }
+  } else if (state.collectiveGuess) {
+    // Score collective guess (guessers)
+    const score = calculateScore(trueRanking, state.collectiveGuess, state.settings.nearMissScoring);
     for (const [playerId] of state.players) {
       if (playerId !== rankerId) {
         turnScores[playerId] = score;
@@ -52,13 +72,16 @@ function emitRevealResults(io: Server<ClientEvents, ServerEvents>, state: Server
     rankerId,
     cards: state.cards.map((c) => ({ id: c.id, text: c.text })),
     trueRanking,
-    collectiveGuess: state.collectiveGuess,
+    collectiveGuess: state.settings.individualGuessEnabled ? null : state.collectiveGuess,
+    individualGuesses: state.settings.individualGuessEnabled ? Object.fromEntries(state.individualGuesses!) : null,
     scores: turnScores,
     totalScores: Object.fromEntries(state.scores),
     playerNames,
     authorshipGuesses: state.authorshipGuesses,
     authorshipResults,
     authorshipScore,
+    funniestCardId: null,
+    funniestCardWinnerId: null,
   };
 
   state.turnHistory.push(result);
@@ -153,6 +176,10 @@ function handleAutoSubmit(io: Server<ClientEvents, ServerEvents>, state: ServerG
 
   if (state.phase === 'guessing' && playerId !== state.currentRankerId) {
     if (!state.submittedPlayerIds.has(playerId)) {
+      if (state.settings.individualGuessEnabled && state.individualGuesses) {
+        const shuffled = [...state.cards.map((c) => c.id)].sort(() => Math.random() - 0.5);
+        state.individualGuesses.set(playerId, shuffled);
+      }
       state.submittedPlayerIds.add(playerId);
       io.to(state.lobbyCode).emit('player-submitted', { playerId });
       const nonRankerCount = state.players.size - 1;
@@ -262,9 +289,30 @@ export function registerGameHandlers(
     io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
   });
 
+  socket.on('submit-individual-guess', ({ ranking }) => {
+    const state = getLobbyForSocket(socket.id);
+    if (!state || state.phase !== 'guessing') return;
+    if (!state.settings.individualGuessEnabled) return;
+    if (socket.id === state.currentRankerId) return;
+    if (state.submittedPlayerIds.has(socket.id)) return;
+    if (ranking.length !== 5) return;
+
+    state.individualGuesses!.set(socket.id, ranking);
+    state.submittedPlayerIds.add(socket.id);
+    io.to(state.lobbyCode).emit('player-submitted', { playerId: socket.id });
+
+    const nonRankerCount = state.players.size - 1;
+    if (state.submittedPlayerIds.size >= nonRankerCount) {
+      advancePhase(state);
+      emitRevealResults(io, state);
+      io.to(state.lobbyCode).emit('phase-changed', toLobbyState(state));
+    }
+  });
+
   socket.on('update-collective-guess', ({ ranking }) => {
     const state = getLobbyForSocket(socket.id);
     if (!state || state.phase !== 'guessing') return;
+    if (state.settings.individualGuessEnabled) return;
     if (socket.id === state.currentRankerId) return;
     if (state.submittedPlayerIds.size > 0) return;
 
@@ -275,6 +323,7 @@ export function registerGameHandlers(
   socket.on('unlock-collective-guess', () => {
     const state = getLobbyForSocket(socket.id);
     if (!state || state.phase !== 'guessing') return;
+    if (state.settings.individualGuessEnabled) return;
     if (socket.id === state.currentRankerId) return;
     if (!state.submittedPlayerIds.has(socket.id)) return;
 
@@ -285,6 +334,7 @@ export function registerGameHandlers(
   socket.on('lock-collective-guess', () => {
     const state = getLobbyForSocket(socket.id);
     if (!state || state.phase !== 'guessing') return;
+    if (state.settings.individualGuessEnabled) return;
     if (!state.collectiveGuess) return;
     if (socket.id === state.currentRankerId) return;
     if (state.submittedPlayerIds.has(socket.id)) return;
@@ -300,6 +350,80 @@ export function registerGameHandlers(
     }
   });
 
+  socket.on('submit-funniest-card', ({ cardId }) => {
+    const state = getLobbyForSocket(socket.id);
+    if (!state || state.phase !== 'reveal') return;
+    if (state.settings.funniestCardMode === 'off') return;
+
+    const isRanker = socket.id === state.currentRankerId;
+
+    if (state.settings.funniestCardMode === 'ranker') {
+      // Only the ranker can pick
+      if (!isRanker) return;
+    } else {
+      // vote mode — anyone can vote, one vote each
+      if (state.funniestCardVotes.has(socket.id)) return;
+    }
+
+    // Validate the card exists
+    if (!state.cards.find((c) => c.id === cardId)) return;
+
+    const resolveFunniest = (resolvedCardId: string | null, winnerId: string | null) => {
+      if (winnerId) {
+        state.scores.set(winnerId, (state.scores.get(winnerId) || 0) + 1);
+      }
+      // Always mark as resolved on the stored TurnResult so the host can proceed
+      const lastResult = state.turnHistory[state.turnHistory.length - 1];
+      if (lastResult) {
+        // Use 'tie' sentinel when there's no winning card, so null stays meaning "not yet resolved"
+        lastResult.funniestCardId = resolvedCardId ?? 'tie';
+        lastResult.funniestCardWinnerId = winnerId;
+        lastResult.totalScores = Object.fromEntries(state.scores);
+        if (winnerId) {
+          lastResult.scores[winnerId] = (lastResult.scores[winnerId] || 0) + 1;
+        }
+      }
+      io.to(state.lobbyCode).emit('funniest-card-result', {
+        cardId: resolvedCardId,
+        winnerId,
+        scores: Object.fromEntries(state.scores),
+      });
+    };
+
+    if (state.settings.funniestCardMode === 'ranker') {
+      // Ranker picks immediately — resolve now
+      const card = state.cards.find((c) => c.id === cardId)!;
+      const winnerId = card.authorId ?? null; // null means auto-generated — no winner
+      resolveFunniest(cardId, winnerId);
+    } else {
+      // vote mode — record vote and broadcast progress
+      state.funniestCardVotes.set(socket.id, cardId);
+      io.to(state.lobbyCode).emit('funniest-votes-updated', {
+        votes: Object.fromEntries(state.funniestCardVotes),
+      });
+
+      // Resolve when all connected players have voted
+      const connectedPlayerIds = Array.from(state.players.values())
+        .filter((p) => p.connected)
+        .map((p) => p.id);
+      const allVoted = connectedPlayerIds.every((id) => state.funniestCardVotes.has(id));
+
+      if (allVoted) {
+        // Tally votes
+        const tally = new Map<string, number>();
+        for (const vid of state.funniestCardVotes.values()) {
+          tally.set(vid, (tally.get(vid) || 0) + 1);
+        }
+        const maxVotes = Math.max(...tally.values());
+        const topCards = [...tally.entries()].filter(([, v]) => v === maxVotes).map(([k]) => k);
+        const winningCardId = topCards.length === 1 ? topCards[0] : null;
+        const winningCard = winningCardId ? state.cards.find((c) => c.id === winningCardId) : null;
+        const winnerId = winningCard?.authorId ?? null;
+        resolveFunniest(winningCardId, winnerId);
+      }
+    }
+  });
+
   socket.on('reset-game', () => {
     const state = getLobbyForSocket(socket.id);
     if (!state || state.hostId !== socket.id) return;
@@ -310,7 +434,9 @@ export function registerGameHandlers(
     state.cards = [];
     state.rankerRanking = null;
     state.collectiveGuess = null;
+    state.individualGuesses = null;
     state.authorshipGuesses = null;
+    state.funniestCardVotes = new Map();
     state.submittedPlayerIds = new Set();
     state.turnHistory = [];
     state.rankerStats = new Map();

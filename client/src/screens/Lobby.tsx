@@ -19,7 +19,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useSocket } from '../hooks/useSocket.ts';
 import { useGame } from '../context/GameContext.tsx';
-import type { GameSettings, Player } from '../../../shared/src/types.ts';
+import type { GameSettings, Player, FunniestCardMode } from '../../../shared/src/types.ts';
 
 function SortablePlayer({ player, index }: { player: Player; index: number }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -58,6 +58,10 @@ export function Lobby() {
       roundCount: 1,
       multipleSubmissionsEnabled: false,
       authorshipEnabled: false,
+      individualGuessEnabled: false,
+      funniestCardMode: 'off',
+      nearMissScoring: false,
+      showSubmittedCards: false,
     }
   );
 
@@ -220,6 +224,98 @@ export function Lobby() {
               ) : (
                 <span className={`text-sm font-medium ${lobbyState.settings.authorshipEnabled ? 'text-purple-600' : 'text-gray-400'}`}>
                   {lobbyState.settings.authorshipEnabled ? 'On' : 'Off'}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Individual guessing</p>
+                <p className="text-xs text-gray-400">Each player ranks independently — no shared board</p>
+              </div>
+              {isHost ? (
+                <button
+                  onClick={() => handleUpdateSettings({ individualGuessEnabled: !localSettings.individualGuessEnabled })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${localSettings.individualGuessEnabled ? 'bg-purple-600' : 'bg-gray-300'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${localSettings.individualGuessEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              ) : (
+                <span className={`text-sm font-medium ${lobbyState.settings.individualGuessEnabled ? 'text-purple-600' : 'text-gray-400'}`}>
+                  {lobbyState.settings.individualGuessEnabled ? 'On' : 'Off'}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex-1 mr-4">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-medium">Near Miss Scoring</p>
+                  <div className="relative group">
+                    <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 text-gray-500 text-xs cursor-default select-none">?</span>
+                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 bg-gray-900 text-white text-xs rounded-lg p-3 hidden group-hover:block z-10 shadow-xl">
+                      <p className="font-semibold mb-1">Near Miss Scoring</p>
+                      <p className="text-gray-300 mb-2">Cards ranked exactly right score 1 pt. Cards ranked just one position off score 0.5 pts. Everything else scores 0.</p>
+                      <p className="text-gray-400 italic">Example: if the answer is 3rd and you guess 2nd or 4th, you get half a point.</p>
+                      <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900" />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400">Half a point for being one position off</p>
+              </div>
+              {isHost ? (
+                <button
+                  onClick={() => handleUpdateSettings({ nearMissScoring: !localSettings.nearMissScoring })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${localSettings.nearMissScoring ? 'bg-purple-600' : 'bg-gray-300'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${localSettings.nearMissScoring ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              ) : (
+                <span className={`text-sm font-medium ${lobbyState.settings.nearMissScoring ? 'text-purple-600' : 'text-gray-400'}`}>
+                  {lobbyState.settings.nearMissScoring ? 'On' : 'Off'}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Show submitted cards</p>
+                <p className="text-xs text-gray-400">Guessers can see each other's cards as they are submitted</p>
+              </div>
+              {isHost ? (
+                <button
+                  onClick={() => handleUpdateSettings({ showSubmittedCards: !localSettings.showSubmittedCards })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${localSettings.showSubmittedCards ? 'bg-purple-600' : 'bg-gray-300'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${localSettings.showSubmittedCards ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              ) : (
+                <span className={`text-sm font-medium ${lobbyState.settings.showSubmittedCards ? 'text-purple-600' : 'text-gray-400'}`}>
+                  {lobbyState.settings.showSubmittedCards ? 'On' : 'Off'}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Funniest card</p>
+                <p className="text-xs text-gray-400">Award a bonus point for the funniest card each turn</p>
+              </div>
+              {isHost ? (
+                <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm">
+                  {(['off', 'ranker', 'vote'] as FunniestCardMode[]).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => handleUpdateSettings({ funniestCardMode: mode })}
+                      className={`px-3 py-1 font-medium transition-colors ${
+                        localSettings.funniestCardMode === mode
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-white text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {mode === 'off' ? 'Off' : mode === 'ranker' ? 'Ranker picks' : 'Vote'}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <span className={`text-sm font-medium ${lobbyState.settings.funniestCardMode !== 'off' ? 'text-purple-600' : 'text-gray-400'}`}>
+                  {lobbyState.settings.funniestCardMode === 'off' ? 'Off' : lobbyState.settings.funniestCardMode === 'ranker' ? 'Ranker picks' : 'Vote'}
                 </span>
               )}
             </div>

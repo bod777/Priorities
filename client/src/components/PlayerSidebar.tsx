@@ -95,6 +95,30 @@ export function PlayerSidebar({ isOpen, onClose }: PlayerSidebarProps) {
                   {lobbyState.settings.authorshipEnabled ? 'On' : 'Off'}
                 </span>
               </li>
+              <li className="flex justify-between">
+                <span>Individual guessing</span>
+                <span className={`font-medium ${lobbyState.settings.individualGuessEnabled ? 'text-green-600' : 'text-gray-500'}`}>
+                  {lobbyState.settings.individualGuessEnabled ? 'On' : 'Off'}
+                </span>
+              </li>
+              <li className="flex justify-between">
+                <span>Funniest card</span>
+                <span className={`font-medium ${lobbyState.settings.funniestCardMode !== 'off' ? 'text-green-600' : 'text-gray-500'}`}>
+                  {lobbyState.settings.funniestCardMode === 'off' ? 'Off' : lobbyState.settings.funniestCardMode === 'ranker' ? 'Ranker picks' : 'Vote'}
+                </span>
+              </li>
+              <li className="flex justify-between">
+                <span>Near miss scoring</span>
+                <span className={`font-medium ${lobbyState.settings.nearMissScoring ? 'text-green-600' : 'text-gray-500'}`}>
+                  {lobbyState.settings.nearMissScoring ? 'On' : 'Off'}
+                </span>
+              </li>
+              <li className="flex justify-between">
+                <span>Show submitted cards</span>
+                <span className={`font-medium ${lobbyState.settings.showSubmittedCards ? 'text-green-600' : 'text-gray-500'}`}>
+                  {lobbyState.settings.showSubmittedCards ? 'On' : 'Off'}
+                </span>
+              </li>
             </ul>
           </section>
         </div>

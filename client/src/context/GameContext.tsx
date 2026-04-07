@@ -15,6 +15,7 @@ interface GameContextState {
   lobbyState: LobbyState | null;
   turnResult: TurnResult | null;
   gameOverData: GameOverData | null;
+  funniestVotes: Record<string, string>;
   showTurnTransition: boolean;
   toasts: Toast[];
 }
@@ -23,6 +24,8 @@ type GameAction =
   | { type: 'SET_PLAYER'; playerId: string; displayName: string }
   | { type: 'SET_LOBBY'; lobbyState: LobbyState }
   | { type: 'SET_TURN_RESULT'; turnResult: TurnResult }
+  | { type: 'UPDATE_FUNNIEST_RESULT'; cardId: string | null; winnerId: string | null; scores: Record<string, number> }
+  | { type: 'UPDATE_FUNNIEST_VOTES'; votes: Record<string, string> }
   | { type: 'SET_GAME_OVER'; gameOverData: GameOverData }
   | { type: 'RESET_TO_LOBBY'; lobbyState: LobbyState }
   | { type: 'SHOW_TURN_TRANSITION' }
@@ -37,6 +40,7 @@ const initialState: GameContextState = {
   lobbyState: null,
   turnResult: null,
   gameOverData: null,
+  funniestVotes: {},
   showTurnTransition: false,
   toasts: [],
 };
@@ -48,7 +52,20 @@ function gameReducer(state: GameContextState, action: GameAction): GameContextSt
     case 'SET_LOBBY':
       return { ...state, lobbyState: action.lobbyState };
     case 'SET_TURN_RESULT':
-      return { ...state, turnResult: action.turnResult };
+      return { ...state, turnResult: action.turnResult, funniestVotes: {} };
+    case 'UPDATE_FUNNIEST_VOTES':
+      return { ...state, funniestVotes: action.votes };
+    case 'UPDATE_FUNNIEST_RESULT':
+      return {
+        ...state,
+        funniestVotes: state.funniestVotes,
+        turnResult: state.turnResult ? {
+          ...state.turnResult,
+          funniestCardId: action.cardId,
+          funniestCardWinnerId: action.winnerId,
+          totalScores: action.scores,
+        } : null,
+      };
     case 'SET_GAME_OVER':
       return { ...state, gameOverData: action.gameOverData };
     case 'RESET_TO_LOBBY':
@@ -203,6 +220,14 @@ export function GameProvider({ children, navigate }: GameProviderProps) {
       dispatch({ type: 'SET_GAME_OVER', gameOverData: data });
     };
 
+    const handleFunniestVotesUpdated = (data: { votes: Record<string, string> }) => {
+      dispatch({ type: 'UPDATE_FUNNIEST_VOTES', votes: data.votes });
+    };
+
+    const handleFunniestCardResult = (data: { cardId: string | null; winnerId: string | null; scores: Record<string, number> }) => {
+      dispatch({ type: 'UPDATE_FUNNIEST_RESULT', cardId: data.cardId, winnerId: data.winnerId, scores: data.scores });
+    };
+
     const handleError = (data: { message: string }) => {
       console.error('Socket error:', data.message);
     };
@@ -218,6 +243,8 @@ export function GameProvider({ children, navigate }: GameProviderProps) {
     socket.on('collective-guess-updated', handleCollectiveGuessUpdated);
     socket.on('reveal-results', handleRevealResults);
     socket.on('game-over', handleGameOver);
+    socket.on('funniest-votes-updated', handleFunniestVotesUpdated);
+    socket.on('funniest-card-result', handleFunniestCardResult);
     socket.on('error', handleError);
 
     return () => {
@@ -232,6 +259,8 @@ export function GameProvider({ children, navigate }: GameProviderProps) {
       socket.off('collective-guess-updated', handleCollectiveGuessUpdated);
       socket.off('reveal-results', handleRevealResults);
       socket.off('game-over', handleGameOver);
+      socket.off('funniest-votes-updated', handleFunniestVotesUpdated);
+      socket.off('funniest-card-result', handleFunniestCardResult);
       socket.off('error', handleError);
     };
   }, [socket]);

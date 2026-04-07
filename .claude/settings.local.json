@@ -7,7 +7,8 @@
       "Bash(grep -l \"currentRound\\\\|totalRounds\\\\|roundCount\\\\|roundNumber\\\\|roundHistory\\\\|startRound\\\\|next-round\\\\|RoundResult\\\\|roundResult\" /c/Users/brido/Sandbox/Personal/Priorities/client/src/screens/*.tsx)",
       "Bash(ssh -T git@github-personal)",
       "Bash(ssh -T git@github-work)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

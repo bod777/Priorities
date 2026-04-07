@@ -8,10 +8,16 @@ export type GamePhase =
   | 'reveal'
   | 'game_over';
 
+export type FunniestCardMode = 'off' | 'ranker' | 'vote';
+
 export interface GameSettings {
   roundCount: number;
   multipleSubmissionsEnabled: boolean;
   authorshipEnabled: boolean;
+  individualGuessEnabled: boolean;
+  funniestCardMode: FunniestCardMode;
+  nearMissScoring: boolean;
+  showSubmittedCards: boolean;
 }
 
 export interface Player {
@@ -36,12 +42,15 @@ export interface TurnResult {
   cards: CardPublic[];
   trueRanking: string[];
   collectiveGuess: string[] | null;
+  individualGuesses: Record<string, string[]> | null;
   scores: Record<string, number>;
   totalScores: Record<string, number>;
   playerNames: Record<string, string>;
   authorshipGuesses: Record<string, string> | null;
   authorshipResults: Record<string, string> | null;
   authorshipScore: number;
+  funniestCardId: string | null;
+  funniestCardWinnerId: string | null;
 }
 
 export interface LobbyState {
@@ -91,6 +100,8 @@ export interface ClientEvents {
   'update-collective-guess': (data: { ranking: string[] }) => void;
   'lock-collective-guess': () => void;
   'unlock-collective-guess': () => void;
+  'submit-individual-guess': (data: { ranking: string[] }) => void;
+  'submit-funniest-card': (data: { cardId: string }) => void;
   'continue-to-ranking': () => void;
   'next-turn': () => void;
   'reset-game': () => void;
@@ -108,5 +119,7 @@ export interface ServerEvents {
   'collective-guess-updated': (data: { ranking: string[] }) => void;
   'reveal-results': (data: TurnResult) => void;
   'game-over': (data: GameOverData) => void;
+  'funniest-card-result': (data: { cardId: string; winnerId: string | null; scores: Record<string, number> }) => void;
+  'funniest-votes-updated': (data: { votes: Record<string, string> }) => void;
   'error': (data: { message: string }) => void;
 }

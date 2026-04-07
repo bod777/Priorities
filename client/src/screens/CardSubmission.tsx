@@ -94,8 +94,8 @@ export function CardSubmission() {
             </div>
           ) : hasDone ? (
             /* POST-DONE VIEW */
-            <div className="text-center space-y-6">
-              <div className="bg-green-50 border-2 border-green-200 rounded-lg p-8">
+            <div className="space-y-6">
+              <div className="bg-green-50 border-2 border-green-200 rounded-lg p-8 text-center">
                 <div className="text-5xl mb-4">✓</div>
                 <h2 className="text-2xl font-bold text-green-800 mb-2">
                   {myCardCount} card{myCardCount !== 1 ? 's' : ''} submitted!
@@ -103,7 +103,7 @@ export function CardSubmission() {
                 <p className="text-green-700">Waiting for other players...</p>
               </div>
               <div>
-                <p className="text-gray-600 mb-3">{submittedCount} of {totalNonRankers} players done</p>
+                <p className="text-gray-600 mb-3 text-center">{submittedCount} of {totalNonRankers} players done</p>
                 <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                   <div
                     className="bg-green-600 h-3 transition-all duration-500"
@@ -111,6 +111,21 @@ export function CardSubmission() {
                   />
                 </div>
               </div>
+              {lobbyState.settings.showSubmittedCards && lobbyState.cards.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">
+                    Cards submitted so far ({lobbyState.cards.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {lobbyState.cards.map((card, index) => (
+                      <div key={card.id} className="flex items-start gap-3 bg-gray-50 rounded-lg p-3">
+                        <span className="text-sm font-bold text-gray-400 w-5 flex-shrink-0">{index + 1}</span>
+                        <p className="text-gray-800 text-sm">{card.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             /* GUESSER SUBMISSION VIEW */
@@ -129,6 +144,22 @@ export function CardSubmission() {
                   <span className={`font-medium ${poolFull ? 'text-orange-500' : 'text-purple-600'}`}>
                     {poolFull ? 'Pool full' : `${lobbyState.cardPool} slot${lobbyState.cardPool !== 1 ? 's' : ''} remaining`}
                   </span>
+                </div>
+              )}
+
+              {lobbyState.settings.showSubmittedCards && lobbyState.cards.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">
+                    Cards submitted so far ({lobbyState.cards.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {lobbyState.cards.map((card, index) => (
+                      <div key={card.id} className="flex items-start gap-3 bg-gray-50 rounded-lg p-3">
+                        <span className="text-sm font-bold text-gray-400 w-5 flex-shrink-0">{index + 1}</span>
+                        <p className="text-gray-800 text-sm">{card.text}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

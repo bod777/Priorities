@@ -14,6 +14,10 @@ export function Home() {
     roundCount: 1,
     multipleSubmissionsEnabled: false,
     authorshipEnabled: false,
+    individualGuessEnabled: false,
+    funniestCardMode: 'off',
+    nearMissScoring: false,
+    showSubmittedCards: false,
   };
 
   const handleCreateLobby = () => {
