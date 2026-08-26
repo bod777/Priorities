@@ -119,7 +119,8 @@ export interface ServerEvents {
   'collective-guess-updated': (data: { ranking: string[] }) => void;
   'reveal-results': (data: TurnResult) => void;
   'game-over': (data: GameOverData) => void;
-  'funniest-card-result': (data: { cardId: string; winnerId: string | null; scores: Record<string, number> }) => void;
+  // cardId is null when no card won the vote (a tie, or an auto-generated card).
+  'funniest-card-result': (data: { cardId: string | null; winnerId: string | null; scores: Record<string, number> }) => void;
   'funniest-votes-updated': (data: { votes: Record<string, string> }) => void;
   'error': (data: { message: string }) => void;
 }
